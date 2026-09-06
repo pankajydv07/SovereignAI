@@ -22,3 +22,25 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-faint);
 }
+
+/* Custom Pulse-Twice Animation for Provenance Canvas Bounding Boxes */
+@keyframes pulse-twice {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25%, 75% {
+    opacity: 0.3;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-twice {
+  animation: pulse-twice 600ms ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-twice {
+    animation: none;
+  }
+}

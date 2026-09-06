@@ -7,14 +7,16 @@ import { SovereigntyScreen, SovereigntyStatus } from "./components/SovereigntySc
 import { ProjectLauncher } from "./components/ProjectLauncher";
 import { SessionList } from "./components/SessionList";
 import { FileTree } from "./components/FileTree";
+import { ReviewApprovePanel } from "./components/ReviewApprovePanel";
+import { PIDAnalysisView } from "./components/PIDAnalysisView";
 import { CoreState, ProjectInfo } from "./protocol";
 import { initialProjectState, projectReducer } from "./reducers/projectReducer";
 import { initialSessionState, sessionReducer } from "./reducers/sessionReducer";
-import { Shield, Zap, MessageSquare } from "lucide-react";
+import { Shield, Zap, MessageSquare, FileCheck, Layers } from "lucide-react";
 
 export const App: React.FC = () => {
   const [coreState, setCoreState] = useState<CoreState>({ type: "connecting" });
-  const [activeTab, setActiveTab] = useState<"chat" | "diagnostics" | "sovereignty">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "diagnostics" | "sovereignty" | "review" | "pid">("chat");
   const [leftRailTab, setLeftRailTab] = useState<LeftRailTab>("launcher");
   const [egressCount, setEgressCount] = useState<number>(0);
   const [isAirGapped, setIsAirGapped] = useState<boolean>(true);
@@ -325,6 +327,28 @@ export const App: React.FC = () => {
                     <Shield className="w-3.5 h-3.5 text-sovereign" />
                     <span>SOVEREIGNTY MONITOR</span>
                   </button>
+                  <button
+                    onClick={() => setActiveTab("review")}
+                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      activeTab === "review"
+                        ? "bg-surface-2 text-[#F59E0B] font-semibold border border-border"
+                        : "text-text-dim hover:text-text"
+                    }`}
+                  >
+                    <FileCheck className="w-3.5 h-3.5 text-[#F59E0B]" />
+                    <span>REVIEW & APPROVE</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("pid")}
+                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      activeTab === "pid"
+                        ? "bg-surface-2 text-[#06B6D4] font-semibold border border-border"
+                        : "text-text-dim hover:text-text"
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5 text-[#06B6D4]" />
+                    <span>P&ID VISION</span>
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2 font-mono text-[11px]">
@@ -350,6 +374,19 @@ export const App: React.FC = () => {
               )}
 
               {activeTab === "sovereignty" && <SovereigntyScreen />}
+
+              {activeTab === "review" && (
+                <ReviewApprovePanel
+                  deliverableId="DELIV-2026-09-C101"
+                  title="TECHNICAL APPROVAL NOTE: Remaining Life & Inspection Sanction"
+                  subject="Crude Distillation Column C-101 Remaining Life & Inspection Sanction"
+                  maker={{ id: "user_sharma", name: "A. Sharma", designation: "Senior Inspection Engineer" }}
+                  checker={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
+                  currentUser={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
+                />
+              )}
+
+              {activeTab === "pid" && <PIDAnalysisView />}
             </>
           )}
         </main>

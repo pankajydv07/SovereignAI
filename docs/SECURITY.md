@@ -11,11 +11,15 @@ Stating the boundary honestly is a strength. A blanket claim of "it's sandboxed 
 | Model-generated code reaching the network | Sandbox has **no network interface** — not blocked, absent |
 | Model-generated code reaching the host filesystem | Read-only rootfs, workspace bind only, seccomp allowlist, resource caps |
 | Path traversal out of the workspace | Single canonicalising resolver with explicit negative tests |
-| A user retrieving documents above their clearance | Retrieval filtered in the data layer before rows are returned |
+| A user retrieving documents above their clearance | Single-chokepoint retrieval enforcing indexed `kb_chunk_roles` join table in SQL before rows leave DB |
 | Tampering with the audit trail | Append-only, hash-chained; each record embeds the previous record's hash |
 | A dependency introducing egress | CI sovereignty grep; per-commit checklist; vendored assets |
 
 **Not defended against:** a privileged host administrator. That is correctly an organisational control, and we say so rather than implying otherwise.
+
+## Single-User SQLite Role Filtering Architecture Note
+
+SQLite lacks native Row-Level Security (RLS). On the desktop build, role-based data protection relies on application-level query enforcement. All chunk retrieval is strictly funneled through a single mandatory retrieval chokepoint (`retrieve_chunks(user_role: str, ...)` in `KnowledgeBaseStore`) which requires `user_role` as a non-default parameter and queries an indexed join table `kb_chunk_roles`. No unfiltered search method exists on the storage surface.
 
 ## The four egress layers
 
@@ -62,3 +66,13 @@ Append-only. Each record contains: run id, user, prompt, plan, every step with t
 Chain verification is a first-class UI action. **Design the failure state first** — a tamper-evident log whose interface cannot show tampering is pointless. On a break, the header turns critical and names the exact record index where verification failed.
 
 Exports are themselves audited. An audit system with an unaudited export path has a hole in it.
+
+## Maker-Checker Identity Attestation Strength
+
+In PSU industrial environments, deliverables gate safety-critical equipment sanctions. SWARAJ enforces non-repudiable maker-checker attestation:
+
+1. **Process-Bound Local Identity**: User identity (`maker_id` / `checker_id`) is bound to the local authenticated system session established at application startup. Identity parameters cannot be arbitrarily self-asserted or edited per action in the UI.
+2. **Separation of Duties Invariant**: The preparing user (`maker`) is strictly prohibited from approving their own deliverable. Both UI buttons and server-side core APIs (`core/approval/service.py`) re-validate `maker_id != checker_id` and fail with `SeparationOfDutiesError`.
+3. **Core Precondition Re-validation**: Core approval endpoints independently verify that 100% of fields are human-verified, 100% of claims are cited from the knowledge base, and calculations are executed & verified before issuing an approval stamp.
+4. **Audit Chain Cryptographic Binding**: Every approval, rejection, and checker word-level diff is signed with `identity_source`, timestamped, and immutably appended to the hash-chained audit database (`prev_hash` -> `record_hash`).
+

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiosqlite
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 CREATE_TABLES_SQL = """
 PRAGMA journal_mode = WAL;
@@ -58,6 +58,16 @@ CREATE TABLE IF NOT EXISTS steps (
     FOREIGN KEY(session_id) REFERENCES sessions(id)
 );
 
+CREATE TABLE IF NOT EXISTS equipment_register (
+    tag_id TEXT PRIMARY KEY,
+    unit_id TEXT NOT NULL,
+    equipment_name TEXT NOT NULL,
+    service_description TEXT NOT NULL,
+    design_pressure_mpa REAL NOT NULL,
+    design_temp_c REAL NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1
+);
+
 CREATE TABLE IF NOT EXISTS tool_calls (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
@@ -94,11 +104,68 @@ CREATE TABLE IF NOT EXISTS project_policies (
     FOREIGN KEY(project_id) REFERENCES projects(id)
 );
 
+CREATE TABLE IF NOT EXISTS kb_documents (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    dept TEXT NOT NULL,
+    classification TEXT NOT NULL,
+    effective_date TEXT NOT NULL,
+    superseded_by TEXT,
+    created_at_ms INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS kb_chunks (
+    id TEXT PRIMARY KEY,
+    doc_id TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    heading_path TEXT NOT NULL,
+    body_text TEXT NOT NULL,
+    token_count INTEGER NOT NULL,
+    page INTEGER NOT NULL,
+    bbox_json TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    FOREIGN KEY(doc_id) REFERENCES kb_documents(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS kb_chunk_roles (
+    chunk_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    PRIMARY KEY (chunk_id, role),
+    FOREIGN KEY(chunk_id) REFERENCES kb_chunks(id) ON DELETE CASCADE
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS kb_chunks_fts USING fts5(
+    chunk_id UNINDEXED,
+    heading_path,
+    body_text,
+    tokenize = 'unicode61 remove_diacritics 0'
+);
+
+CREATE TABLE IF NOT EXISTS kb_vectors (
+    chunk_id TEXT PRIMARY KEY,
+    embedding_json TEXT NOT NULL,
+    FOREIGN KEY(chunk_id) REFERENCES kb_chunks(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS calc_executions (
+    calc_run_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    equipment_tag TEXT NOT NULL,
+    title TEXT NOT NULL,
+    record_json TEXT NOT NULL,
+    verification_passed INTEGER NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    FOREIGN KEY(session_id) REFERENCES sessions(id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id, updated_at_ms DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session_seq ON events(session_id, seq);
 CREATE INDEX IF NOT EXISTS idx_steps_session ON steps(session_id, step_index);
 CREATE INDEX IF NOT EXISTS idx_tool_calls_session ON tool_calls(session_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_session ON artifacts(session_id);
+CREATE INDEX IF NOT EXISTS idx_kb_chunk_roles ON kb_chunk_roles(role, chunk_id);
+CREATE INDEX IF NOT EXISTS idx_kb_documents_effective ON kb_documents(effective_date, superseded_by);
+CREATE INDEX IF NOT EXISTS idx_kb_chunks_doc ON kb_chunks(doc_id, chunk_index);
 
 CREATE TRIGGER IF NOT EXISTS prevent_event_update
 BEFORE UPDATE ON events

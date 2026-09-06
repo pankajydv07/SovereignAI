@@ -10,10 +10,14 @@ class ToolRegistry:
 
     # Default tool subsets per task class (max 6 tools per class for local model reliability)
     TASK_CLASS_MAP: dict[str, list[str]] = {
-        "code": ["fs_read", "fs_list", "glob", "fs_write"],
+        "code_generate": ["fs_read", "fs_list", "glob", "fs_write", "code_exec"],
+        "code_debug": ["fs_read", "fs_list", "glob", "fs_write", "code_exec"],
+        "code": ["fs_read", "fs_list", "glob", "fs_write", "code_exec", "calc_exec"],
         "planner": ["fs_read", "fs_list", "glob"],
-        "writer": ["fs_read", "fs_write"],
-        "default": ["fs_read", "fs_list", "glob", "fs_write"],
+        "writer": ["fs_read", "fs_write", "render_deliverable", "calc_exec"],
+        "calc": ["fs_read", "fs_write", "code_exec", "calc_exec"],
+        "render": ["fs_read", "fs_write", "render_deliverable"],
+        "default": ["fs_read", "fs_list", "glob", "fs_write", "render_deliverable", "calc_exec"],
     }
 
     MAX_TOOLS_PER_TASK: int = 6

@@ -86,13 +86,24 @@
         }
       }
     },
+    "VerificationMeta": {
+      "type": "object",
+      "required": ["verifiedBy", "verifiedAt", "originalValue"],
+      "properties": {
+        "verifiedBy": { "type": "string" },
+        "verifiedAt": { "type": "string" },
+        "originalValue": { "type": "string" },
+        "correctedValue": { "type": ["string", "null"] }
+      }
+    },
     "SwarajMeta": {
       "type": "object",
       "properties": {
         "provenance": { "$ref": "#/definitions/ProvenanceMeta" },
         "makerChecker": { "$ref": "#/definitions/MakerCheckerMeta" },
         "deliverable": { "$ref": "#/definitions/DeliverableMeta" },
-        "routingDecision": { "$ref": "#/definitions/RoutingDecisionMeta" }
+        "routingDecision": { "$ref": "#/definitions/RoutingDecisionMeta" },
+        "verification": { "$ref": "#/definitions/VerificationMeta" }
       }
     }
   }
