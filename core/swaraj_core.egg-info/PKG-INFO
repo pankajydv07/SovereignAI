@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: swaraj-core
+Version: 0.1.0
+Summary: SWARAJ Agentic AI Python Core
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic>=2.7.0
+Requires-Dist: aiosqlite>=0.20.0
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: structlog>=24.1.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: mypy>=1.9.0; extra == "dev"
+Requires-Dist: ruff>=0.3.0; extra == "dev"
+
+# SWARAJ Core (Python Agent Engine)
+
+Python 3.12 package owning the agent loop, model registry, router, tool execution, OCR/ingestion, and SQLite session storage.
+
+## Execution Model
+
+The core runs as a stdio sidecar managed by Rust (`src-tauri`).
+- **No network sockets** opened (`ss -lntp` shows nothing).
+- Reads ACP JSON-RPC requests from `stdin`.
+- Writes ACP JSON-RPC responses and notifications to `stdout`.

@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+core/__init__.py
+core/main.py
+protocol/models.py
+swaraj_core.egg-info/PKG-INFO
+swaraj_core.egg-info/SOURCES.txt
+swaraj_core.egg-info/dependency_links.txt
+swaraj_core.egg-info/requires.txt
+swaraj_core.egg-info/top_level.txt

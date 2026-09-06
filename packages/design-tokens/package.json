@@ -1,0 +1,7 @@
+{
+  "name": "@swaraj/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "style": "tokens.css"
+}

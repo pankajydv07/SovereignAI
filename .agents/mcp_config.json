@@ -1,0 +1,4 @@
+{
+  "$comment": "SWARAJ workspace MCP servers. STDIO TRANSPORT ONLY - see .agents/rules/00-sovereignty.md. Never add an http or sse transport here; it would open a network path out of the air gap. Every entry must be an explicitly reviewed local executable.",
+  "mcpServers": {}
+}

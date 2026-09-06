@@ -1,0 +1,86 @@
+# models.yaml
+#
+# THE ONLY FILE IN THIS REPOSITORY PERMITTED TO NAME A MODEL.
+# Application code references roles, never tags. See ADR-009.
+#
+# Adding a model:  ollama pull <tag>  →  add it to a role list  →  make bench
+# No code change. If a code change seems necessary, the abstraction is broken.
+#
+# The registry auto-discovers installed models via /api/tags and /api/show,
+# reading real capabilities (vision, thinking, tool-calling), context length,
+# parameter size and quantisation. This file supplies only what Ollama cannot
+# know: role assignment, context caps, residency policy, and measured priors.
+
+version: 1
+
+ollama:
+  host: "http://127.0.0.1:11434"   # the only permitted outbound destination
+  # Set these in the environment, not here — they are machine-level:
+  #   OLLAMA_MAX_LOADED_MODELS   cap concurrent residency for your GPU
+  #   OLLAMA_NUM_PARALLEL=1      RAM scales by parallelism x context. Keep at 1
+  #                              on constrained hardware.
+  #   OLLAMA_MAX_QUEUE           default 512
+
+# ---------------------------------------------------------------------------
+# ROLES — ordered candidate lists. First available model wins.
+# Replace these tags with the four models you actually have installed.
+# ---------------------------------------------------------------------------
+roles:
+  planner:
+    - qwen3:30b
+    - gpt-oss:20b
+  coder:
+    - qwen3-coder:30b
+    - qwen3:30b
+  writer:
+    - qwen3:30b
+  vision:
+    - qwen2.5vl:7b
+  embedder:
+    - bge-m3
+  classifier:
+    - bge-m3          # embedding + logistic head, not a generative call
+
+# ---------------------------------------------------------------------------
+# OVERRIDES — optional. Anything omitted is auto-discovered.
+# ---------------------------------------------------------------------------
+overrides:
+  qwen3-coder:30b:
+    num_ctx: 32768          # cap below the model maximum to control VRAM
+    keep_alive: "30m"       # hot role: keep resident
+    temperature: 0.2
+
+  qwen3:30b:
+    num_ctx: 32768
+    keep_alive: "30m"
+
+  qwen2.5vl:7b:
+    num_ctx: 16384
+    keep_alive: "5m"        # colder: release VRAM sooner
+
+  bge-m3:
+    keep_alive: "-1"        # tiny and constantly used: pin it
+
+# ---------------------------------------------------------------------------
+# ROUTING — task classes map to roles. Priors are MEASURED by `make bench`
+# on this machine and this task distribution. Never hand-write them, and
+# never copy them from a public leaderboard.
+# ---------------------------------------------------------------------------
+routing:
+  classes:
+    code_generate:     coder
+    code_debug:        coder
+    doc_summarise:     writer
+    doc_extract:       writer
+    engineering_calc:  planner
+    official_drafting: writer
+    vision_ocr:        vision
+    kb_qa:             writer
+    other:             planner
+
+  confidence_floor: 0.55    # below this, escalate to planner
+  max_tools_exposed: 6      # small models degrade with large tool menus
+  escalate_on_verifier_failure: true
+  max_escalations: 1
+
+priors: {}   # written by `make bench` — do not edit by hand

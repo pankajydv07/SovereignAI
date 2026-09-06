@@ -1,0 +1,64 @@
+/* SWARAJ Design System Tokens - Authoritative Source */
+
+:root {
+  /* Dark Theme (Default Console Interface) */
+  --bg: #0B0F14;
+  --surface: #121821;
+  --surface-2: #1A222E;
+  --border: #263241;
+  --hairline: #1B2430;
+
+  --text: #E6EDF3;
+  --text-dim: #9AA7B4;
+  --text-faint: #6B7A8A;
+  --accent: #4C8DF6;
+
+  /* Semantic Status Colors (Scarcity & Meaning only) */
+  --sovereign: #10B981;
+  --verify: #F59E0B;
+  --critical: #EF4444;
+
+  /* Model Role Tints */
+  --tint-planner: #6366F1;
+  --tint-coder: #8B5CF6;
+  --tint-vision: #06B6D4;
+  --tint-ocr: #14B8A6;
+
+  /* Geometry & Grid */
+  --font-base-size: 13px;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --topbar-height: 44px;
+  --leftrail-width: 56px;
+  --row-height: 30px;
+}
+
+[data-theme="light"] {
+  --bg: #FFFFFF;
+  --surface: #F6F8FA;
+  --surface-2: #EEF1F4;
+  --border: #D0D7DE;
+  --hairline: #E1E4E8;
+  --text: #1F2328;
+  --text-dim: #57606A;
+  --text-faint: #8C959F;
+  --accent: #0B62D6;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-base-size);
+  line-height: 1.45;
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
