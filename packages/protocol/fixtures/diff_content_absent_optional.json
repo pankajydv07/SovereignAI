@@ -1,0 +1,4 @@
+{
+  "path": "core/context/compaction.py",
+  "newText": "# compaction logic for context budget"
+}

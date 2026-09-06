@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": "init-1",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2026-03-01",
+    "capabilities": ["sessions", "streaming", "tools", "sandboxing", "egress_monitor"]
+  }
+}

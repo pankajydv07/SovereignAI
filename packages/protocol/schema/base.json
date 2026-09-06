@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BaseProtocol",
+  "description": "Base JSON-RPC 2.0 protocol definitions and constants for SWARAJ.",
+  "protocolVersion": "2026-03-01",
+  "definitions": {
+    "ProtocolMessage": {
+      "type": "object",
+      "required": ["jsonrpc", "method"],
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

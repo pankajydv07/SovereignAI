@@ -1,0 +1,21 @@
+{
+  "sessionId": "sess-202",
+  "update": {
+    "type": "state_change",
+    "state": "ingesting_document"
+  },
+  "meta": {
+    "provenance": {
+      "field": "Design Pressure",
+      "confidence": 0.98,
+      "page": 4,
+      "bbox": [120.5, 340.0, 85.0, 18.2],
+      "extractor": "glm-ocr"
+    },
+    "makerChecker": {
+      "maker": "engineer_a",
+      "status": "pending",
+      "timestamp": "2026-09-06T19:00:00Z"
+    }
+  }
+}

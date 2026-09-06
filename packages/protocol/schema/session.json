@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SessionProtocol",
+  "description": "Session lifecycle and streaming updates protocol schema.",
+  "definitions": {
+    "SessionNewParams": {
+      "type": "object",
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string" },
+        "title": { "type": "string" }
+      }
+    },
+    "SessionLoadParams": {
+      "type": "object",
+      "required": ["sessionId"],
+      "properties": {
+        "sessionId": { "type": "string" }
+      }
+    },
+    "SessionResumeParams": {
+      "type": "object",
+      "required": ["sessionId"],
+      "properties": {
+        "sessionId": { "type": "string" }
+      }
+    },
+    "SessionCloseParams": {
+      "type": "object",
+      "required": ["sessionId"],
+      "properties": {
+        "sessionId": { "type": "string" }
+      }
+    },
+    "SessionListParams": {
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string" }
+      }
+    },
+    "PlanStep": {
+      "type": "object",
+      "required": ["stepIndex", "description"],
+      "properties": {
+        "stepIndex": { "type": "integer" },
+        "description": { "type": "string" },
+        "tool": { "type": "string" },
+        "sideEffect": { "type": "string" },
+        "requiresApproval": { "type": "boolean" }
+      }
+    },
+    "ToolCallUpdatePayload": {
+      "type": "object",
+      "required": ["type", "toolCall"],
+      "properties": {
+        "type": { "type": "string", "const": "tool_call" },
+        "toolCall": { "$ref": "tool.json#/definitions/ToolCallUpdate" }
+      }
+    },
+    "PlanUpdatePayload": {
+      "type": "object",
+      "required": ["type", "steps"],
+      "properties": {
+        "type": { "type": "string", "const": "plan" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PlanStep" }
+        }
+      }
+    },
+    "DiffUpdatePayload": {
+      "type": "object",
+      "required": ["type", "diff"],
+      "properties": {
+        "type": { "type": "string", "const": "diff" },
+        "diff": { "$ref": "content.json#/definitions/DiffContent" }
+      }
+    },
+    "TerminalUpdatePayload": {
+      "type": "object",
+      "required": ["type", "terminal"],
+      "properties": {
+        "type": { "type": "string", "const": "terminal" },
+        "terminal": { "$ref": "content.json#/definitions/TerminalContent" }
+      }
+    },
+    "StateChangeUpdatePayload": {
+      "type": "object",
+      "required": ["type", "state"],
+      "properties": {
+        "type": { "type": "string", "const": "state_change" },
+        "state": { "type": "string" }
+      }
+    },
+    "SessionUpdateNotification": {
+      "type": "object",
+      "required": ["sessionId", "update"],
+      "properties": {
+        "sessionId": { "type": "string" },
+        "update": {
+          "type": "object",
+          "discriminator": { "propertyName": "type" },
+          "oneOf": [
+            { "$ref": "#/definitions/ToolCallUpdatePayload" },
+            { "$ref": "#/definitions/PlanUpdatePayload" },
+            { "$ref": "#/definitions/DiffUpdatePayload" },
+            { "$ref": "#/definitions/TerminalUpdatePayload" },
+            { "$ref": "#/definitions/StateChangeUpdatePayload" }
+          ]
+        },
+        "meta": { "$ref": "meta.json#/definitions/SwarajMeta" }
+      }
+    }
+  }
+}

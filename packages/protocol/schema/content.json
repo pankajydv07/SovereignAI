@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContentProtocol",
+  "description": "Content payloads for ACP diff and terminal streaming.",
+  "definitions": {
+    "DiffContent": {
+      "type": "object",
+      "required": ["path", "newText"],
+      "properties": {
+        "path": { "type": "string" },
+        "oldText": { "type": "string" },
+        "newText": { "type": "string" }
+      }
+    },
+    "TerminalContent": {
+      "type": "object",
+      "required": ["terminalId", "data"],
+      "properties": {
+        "terminalId": { "type": "string" },
+        "data": { "type": "string" }
+      }
+    }
+  }
+}

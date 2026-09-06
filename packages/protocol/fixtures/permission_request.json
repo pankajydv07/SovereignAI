@@ -1,0 +1,11 @@
+{
+  "requestId": "req-402",
+  "tool": "code_exec",
+  "sideEffect": "exec",
+  "description": "Execute python code in network-isolated bubblewrap sandbox",
+  "options": ["allow_once", "allow_session", "always_allow", "deny"],
+  "diff": {
+    "path": "scratch/calc.py",
+    "newText": "def calc_thickness(pressure: float, radius: float, stress: float) -> float:\n    return (pressure * radius) / (stress - 0.6 * pressure)\n"
+  }
+}

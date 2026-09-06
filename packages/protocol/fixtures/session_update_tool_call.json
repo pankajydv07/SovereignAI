@@ -1,0 +1,17 @@
+{
+  "sessionId": "sess-101",
+  "update": {
+    "type": "tool_call",
+    "toolCall": {
+      "toolCallId": "call-99",
+      "name": "fs_read",
+      "kind": "read",
+      "status": "in_progress",
+      "input": {
+        "path": "core/context/compaction.py",
+        "startLine": 1,
+        "endLine": 50
+      }
+    }
+  }
+}
