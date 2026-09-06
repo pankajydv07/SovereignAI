@@ -1,8 +1,18 @@
 use std::path::PathBuf;
 use tokio::process::{Child, Command};
 
+pub fn resolve_repo_root() -> PathBuf {
+    let start = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    for candidate in start.ancestors() {
+        if candidate.join("core").join("core").join("main.py").exists() {
+            return candidate.to_path_buf();
+        }
+    }
+    start
+}
+
 pub fn resolve_python_venv() -> Result<PathBuf, String> {
-    let workspace_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let workspace_root = resolve_repo_root();
     
     #[cfg(windows)]
     let venv_python = workspace_root

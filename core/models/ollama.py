@@ -64,11 +64,15 @@ class OllamaClient:
         self,
         model: str,
         messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        format: dict[str, Any] | str | None = None,
         options: dict[str, Any] | None = None,
         keep_alive: str | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Stream chat completions from POST /api/chat.
 
+        `tools` list contains function schemas for native tool calls.
+        `format` passes JSON Schema object or format type.
         `options` dictionary is placed inside the top-level 'options' JSON key.
         `keep_alive` is placed top-level.
         """
@@ -78,6 +82,12 @@ class OllamaClient:
             "messages": messages,
             "stream": True,
         }
+
+        if tools:
+            payload["tools"] = tools
+
+        if format:
+            payload["format"] = format
 
         if options:
             payload["options"] = options

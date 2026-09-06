@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -11,6 +10,7 @@ use tokio::sync::{mpsc, oneshot, Mutex};
 
 use crate::sidecar::process::{
     attach_windows_job_object, configure_platform_child_guard, resolve_python_venv,
+    resolve_repo_root,
 };
 use crate::sidecar::types::{
     CoreState, RpcError, StderrRingBuffer, MAX_RESTART_ATTEMPTS, SUPPORTED_PROTOCOL_VERSION,
@@ -230,7 +230,7 @@ impl CoreSupervisor {
 
     async fn run_instance(&self) -> Result<(), String> {
         let python_bin = resolve_python_venv()?;
-        let workspace_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let workspace_root = resolve_repo_root();
         let main_py = workspace_root.join("core").join("core").join("main.py");
 
         if !main_py.exists() {
