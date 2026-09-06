@@ -222,6 +222,16 @@ async fn execute_sandbox(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn select_folder() -> Result<Option<String>, String> {
+    let handle = rfd::AsyncFileDialog::new()
+        .set_title("Select Workspace Folder")
+        .pick_folder()
+        .await;
+
+    Ok(handle.map(|h| h.path().to_string_lossy().to_string()))
+}
+
 #[cfg(debug_assertions)]
 #[tauri::command]
 async fn kill_core_process(state: State<'_, AppState>) -> Result<(), String> {
@@ -274,6 +284,7 @@ pub fn run() {
             get_egress_events,
             acknowledge_egress_event,
             execute_sandbox,
+            select_folder,
             #[cfg(debug_assertions)]
             kill_core_process
         ])

@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for SWARAJ desktop main window",
+  "windows": ["main", "*"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:event:allow-emit",
+    "core:event:allow-emit-to",
+    "core:path:default",
+    "core:window:default",
+    "core:webview:default"
+  ]
+}

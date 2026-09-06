@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "SWARAJ — Industrial Agent Workbench",
         "width": 1280,
         "height": 800,

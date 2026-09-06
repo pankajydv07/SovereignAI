@@ -140,10 +140,27 @@ export const App: React.FC = () => {
 
   const handleOpenFolder = async () => {
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-    const selected = window.prompt("Enter absolute project folder path:");
-    if (!selected || !selected.trim()) return;
-    const path = selected.trim();
-    const folderName = path.split(/[\/\\]/).pop() || path;
+    let path: string | null = null;
+    if (isTauri) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const selected = await invoke<string | null>("select_folder");
+        if (!selected) return;
+        path = selected;
+      } catch (err) {
+        console.error("Failed to open native folder picker:", err);
+        const fallback = window.prompt("Enter absolute project folder path:");
+        if (!fallback || !fallback.trim()) return;
+        path = fallback.trim();
+      }
+    } else {
+      const selected = window.prompt("Enter absolute project folder path:");
+      if (!selected || !selected.trim()) return;
+      path = selected.trim();
+    }
+
+    if (!path) return;
+    const folderName = path.split(/[\/\\]/).filter(Boolean).pop() || path;
     const newProj: ProjectInfo = {
       id: `proj-${Date.now()}`,
       name: folderName,
