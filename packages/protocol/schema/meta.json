@@ -54,12 +54,45 @@
         }
       }
     },
+    "CandidateScoreMeta": {
+      "type": "object",
+      "required": ["modelTag", "qualityPrior", "vramFit", "latencyScore", "swapPenalty", "totalScore", "isWinner", "rejectionReason"],
+      "properties": {
+        "modelTag": { "type": "string" },
+        "qualityPrior": { "type": "number" },
+        "vramFit": { "type": "number" },
+        "latencyScore": { "type": "number" },
+        "swapPenalty": { "type": "number" },
+        "totalScore": { "type": "number" },
+        "isWinner": { "type": "boolean" },
+        "rejectionReason": { "type": ["string", "null"] }
+      }
+    },
+    "RoutingDecisionMeta": {
+      "type": "object",
+      "required": ["taskClass", "selectedModelTag", "fallbackModelTag", "confidence", "routingLatencyMs", "isManualOverride", "featureVector", "candidates"],
+      "properties": {
+        "taskClass": { "type": "string" },
+        "selectedModelTag": { "type": "string" },
+        "fallbackModelTag": { "type": "string" },
+        "confidence": { "type": "number" },
+        "routingLatencyMs": { "type": "number" },
+        "isManualOverride": { "type": "boolean" },
+        "degradedReason": { "type": ["string", "null"] },
+        "featureVector": { "type": "object" },
+        "candidates": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CandidateScoreMeta" }
+        }
+      }
+    },
     "SwarajMeta": {
       "type": "object",
       "properties": {
         "provenance": { "$ref": "#/definitions/ProvenanceMeta" },
         "makerChecker": { "$ref": "#/definitions/MakerCheckerMeta" },
-        "deliverable": { "$ref": "#/definitions/DeliverableMeta" }
+        "deliverable": { "$ref": "#/definitions/DeliverableMeta" },
+        "routingDecision": { "$ref": "#/definitions/RoutingDecisionMeta" }
       }
     }
   }

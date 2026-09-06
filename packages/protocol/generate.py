@@ -278,6 +278,25 @@ class FileNode(ProtocolBaseModel):
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
     is_capped: bool | None = Field(default=None, alias="isCapped")
     total_entries: int | None = Field(default=None, alias="totalEntries")
+
+
+class SandboxExecParams(ProtocolBaseModel):
+    run_id: str = Field(alias="runId")
+    command: list[str]
+    work_dir: str | None = Field(default=None, alias="workDir")
+    timeout_s: int = Field(default=60, alias="timeoutS")
+    env: dict[str, str] = Field(default_factory=dict)
+    declared_outputs: list[str] = Field(default_factory=list, alias="declaredOutputs")
+
+
+class SandboxExecResult(ProtocolBaseModel):
+    run_id: str = Field(alias="runId")
+    exit_code: int = Field(alias="exitCode")
+    stdout_tail: list[str] = Field(default_factory=list, alias="stdoutTail")
+    stderr_tail: list[str] = Field(default_factory=list, alias="stderrTail")
+    duration_ms: int = Field(alias="durationMs")
+    timed_out: bool = Field(alias="timedOut")
+    output_artifacts: list[str] = Field(default_factory=list, alias="outputArtifacts")
 '''
 
 RUST_CONTENT = '''// GENERATED FILE — DO NOT EDIT MANUALLY
@@ -561,6 +580,37 @@ pub struct FileNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_entries: Option<usize>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxExecParams {
+    pub run_id: String,
+    pub command: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub work_dir: Option<String>,
+    #[serde(default = "default_timeout")]
+    pub timeout_s: u32,
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub env: std::collections::HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub declared_outputs: Vec<String>,
+}
+
+fn default_timeout() -> u32 {
+    60
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxExecResult {
+    pub run_id: String,
+    pub exit_code: i32,
+    pub stdout_tail: Vec<String>,
+    pub stderr_tail: Vec<String>,
+    pub duration_ms: u64,
+    pub timed_out: bool,
+    pub output_artifacts: Vec<String>,
+}
 '''
 
 TS_CONTENT = '''// GENERATED FILE — DO NOT EDIT MANUALLY
@@ -809,6 +859,27 @@ export const FileNodeSchema = z.object({
   totalEntries: z.number().optional(),
 });
 export type FileNode = z.infer<typeof FileNodeSchema>;
+
+export const SandboxExecParamsSchema = z.object({
+  runId: z.string(),
+  command: z.array(z.string()),
+  workDir: z.string().optional(),
+  timeoutS: z.number().int().default(60),
+  env: z.record(z.string(), z.string()).default({}),
+  declaredOutputs: z.array(z.string()).default([]),
+});
+export type SandboxExecParams = z.infer<typeof SandboxExecParamsSchema>;
+
+export const SandboxExecResultSchema = z.object({
+  runId: z.string(),
+  exitCode: z.number().int(),
+  stdoutTail: z.array(z.string()),
+  stderrTail: z.array(z.string()),
+  durationMs: z.number().int(),
+  timedOut: z.boolean(),
+  outputArtifacts: z.array(z.string()),
+});
+export type SandboxExecResult = z.infer<typeof SandboxExecResultSchema>;
 '''
 
 

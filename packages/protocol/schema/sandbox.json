@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sandbox",
+  "description": "Sandbox code execution protocol definitions for SWARAJ",
+  "definitions": {
+    "SandboxExecParams": {
+      "type": "object",
+      "properties": {
+        "runId": { "type": "string" },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "workDir": { "type": ["string", "null"] },
+        "timeoutS": { "type": "integer", "default": 60 },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "declaredOutputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["runId", "command"]
+    },
+    "SandboxExecResult": {
+      "type": "object",
+      "properties": {
+        "runId": { "type": "string" },
+        "exitCode": { "type": "integer" },
+        "stdoutTail": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stderrTail": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "durationMs": { "type": "integer" },
+        "timedOut": { "type": "boolean" },
+        "outputArtifacts": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["runId", "exitCode", "stdoutTail", "stderrTail", "durationMs", "timedOut", "outputArtifacts"]
+    }
+  }
+}

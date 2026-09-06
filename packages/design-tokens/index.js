@@ -38,6 +38,9 @@ module.exports = {
       width: {
         leftrail: "56px",
       },
+      transitionDuration: {
+        400: "400ms",
+      },
     },
   },
 };

@@ -1,5 +1,6 @@
 pub mod protocol;
 pub mod pty;
+pub mod sandbox;
 pub mod sidecar;
 pub mod sovereignty;
 pub mod workspace;
@@ -209,6 +210,18 @@ async fn acknowledge_egress_event(
     Ok(state.sovereignty.acknowledge_event(&id))
 }
 
+#[tauri::command]
+async fn execute_sandbox(
+    app_handle: tauri::AppHandle,
+    params: protocol::SandboxExecParams,
+) -> Result<protocol::SandboxExecResult, String> {
+    let launcher = sandbox::create_launcher();
+    launcher
+        .run(params, Some(app_handle))
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[cfg(debug_assertions)]
 #[tauri::command]
 async fn kill_core_process(state: State<'_, AppState>) -> Result<(), String> {
@@ -260,6 +273,7 @@ pub fn run() {
             get_sovereignty_status,
             get_egress_events,
             acknowledge_egress_event,
+            execute_sandbox,
             #[cfg(debug_assertions)]
             kill_core_process
         ])

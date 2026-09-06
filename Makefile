@@ -48,7 +48,7 @@ fmt: ## Format all three languages
 	cd apps/desktop && pnpm prettier --write .
 
 bench: ## Benchmark models and populate routing priors. Usage: make bench [MODEL=tag]
-	cd core && .venv/bin/python -m eval.bench $(if $(MODEL),--model $(MODEL),)
+	python eval/bench.py $(if $(MODEL),--model $(MODEL),)
 
 check: lint typecheck test protocol-fresh file-length model-names ## All CI gates
 	@echo "All gates passed."

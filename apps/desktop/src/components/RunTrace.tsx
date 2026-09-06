@@ -107,7 +107,13 @@ export const RunTrace: React.FC<RunTraceProps> = ({
                     }`}
                   />
                   <span className="text-[#4C8DF6]">#{step.stepIndex}</span>
-                  <span className="text-[#E6EDF3]">{step.description}</span>
+                  {step.tool === "model_swap" ? (
+                    <span data-testid={`model-swap-row-${step.stepIndex}`} className="text-[#F59E0B] font-bold animate-pulse">
+                      waking {step.description}… {step.elapsedMs ? (step.elapsedMs / 1000).toFixed(1) : "0.0"}s
+                    </span>
+                  ) : (
+                    <span className="text-[#E6EDF3]">{step.description}</span>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-3">

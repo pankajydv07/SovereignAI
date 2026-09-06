@@ -279,3 +279,34 @@ pub struct FileNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_entries: Option<usize>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxExecParams {
+    pub run_id: String,
+    pub command: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub work_dir: Option<String>,
+    #[serde(default = "default_timeout")]
+    pub timeout_s: u32,
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub env: std::collections::HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub declared_outputs: Vec<String>,
+}
+
+fn default_timeout() -> u32 {
+    60
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxExecResult {
+    pub run_id: String,
+    pub exit_code: i32,
+    pub stdout_tail: Vec<String>,
+    pub stderr_tail: Vec<String>,
+    pub duration_ms: u64,
+    pub timed_out: bool,
+    pub output_artifacts: Vec<String>,
+}

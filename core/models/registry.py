@@ -70,6 +70,7 @@ class ModelRegistry:
 
         self._roles = data.get("roles", {})
         self._overrides = data.get("overrides", {})
+        self._priors = data.get("priors", {})
 
     def resolve(self, role: str | Role) -> str:
         """Resolve a Role to its configured candidate model tag.

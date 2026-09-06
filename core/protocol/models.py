@@ -261,3 +261,22 @@ class FileNode(ProtocolBaseModel):
     size_bytes: int | None = Field(default=None, alias="sizeBytes")
     is_capped: bool | None = Field(default=None, alias="isCapped")
     total_entries: int | None = Field(default=None, alias="totalEntries")
+
+
+class SandboxExecParams(ProtocolBaseModel):
+    run_id: str = Field(alias="runId")
+    command: list[str]
+    work_dir: str | None = Field(default=None, alias="workDir")
+    timeout_s: int = Field(default=60, alias="timeoutS")
+    env: dict[str, str] = Field(default_factory=dict)
+    declared_outputs: list[str] = Field(default_factory=list, alias="declaredOutputs")
+
+
+class SandboxExecResult(ProtocolBaseModel):
+    run_id: str = Field(alias="runId")
+    exit_code: int = Field(alias="exitCode")
+    stdout_tail: list[str] = Field(default_factory=list, alias="stdoutTail")
+    stderr_tail: list[str] = Field(default_factory=list, alias="stderrTail")
+    duration_ms: int = Field(alias="durationMs")
+    timed_out: bool = Field(alias="timedOut")
+    output_artifacts: list[str] = Field(default_factory=list, alias="outputArtifacts")

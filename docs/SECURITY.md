@@ -34,16 +34,16 @@ An eBPF probe on `tcp_connect` and `udp_sendmsg` captures every outbound attempt
 
 If the eBPF probe is not attached, the UI must **not** show green. It shows `--verify`: *"Egress monitoring inactive — enforcement is active but unverified."* Claiming zero egress without a live monitor would be dishonest, and the UI refuses to do it.
 
-## Sandbox tiers
+| Control | bubblewrap (Linux) | AppContainer + JobObject (Windows) | Container | gVisor | Firecracker |
+|---|---|---|---|---|---|
+| Network | No interface (`--unshare-net`) | Kernel capability denial (`WSAEACCES`, 0 capabilities) | `--network=none` | No interface | No NIC attached |
+| Kernel isolation | Namespaces (`--unshare-ipc/uts/pid/cgroup`, `--cap-drop ALL`, `--new-session`) | AppContainer SID ACLs + JobObject limits (2GB job RAM, 16 procs, CPU cap) | Namespaces | Syscall interposition | Hardware VM |
+| Overhead | Minimal | Minimal | Minimal | 10–30% on I/O | ~100ms boot |
+| Extra dependency | None | None (native Win32) | Runtime required | runsc | KVM |
 
-| Control | bubblewrap (default) | Container | gVisor | Firecracker |
-|---|---|---|---|---|
-| Network | No interface | `--network=none` | No interface | No NIC attached |
-| Kernel isolation | Namespaces | Namespaces | Syscall interposition | Hardware VM |
-| Overhead | Minimal | Minimal | 10–30% on I/O | ~100ms boot |
-| Extra dependency | None | Runtime required | runsc | KVM |
-
-**Windows is meaningfully weaker.** Job object plus restricted token, network disabled, no seccomp equivalent. `code_exec` there defaults to requiring approval every time. Document this; do not paper over it.
+**Windows Architecture vs. Linux Architecture:**
+- **Linux (`bubblewrap`):** Unshares the network namespace completely — no network interfaces exist inside the container except isolated loopback.
+- **Windows (`AppContainer`):** OS network interfaces remain visible to the subsystem, but kernel security checks deny socket creation and DNS requests (`WSAEACCES`, Error 10013) because the process token has zero network capabilities (`internetClient` and `privateNetworkClientServer` omitted). Loopback access to local services like Ollama (127.0.0.1:11434) is blocked without `LoopbackExempt`.
 
 ## Supply chain
 

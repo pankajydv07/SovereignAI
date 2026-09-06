@@ -244,3 +244,24 @@ export const FileNodeSchema = z.object({
   totalEntries: z.number().optional(),
 });
 export type FileNode = z.infer<typeof FileNodeSchema>;
+
+export const SandboxExecParamsSchema = z.object({
+  runId: z.string(),
+  command: z.array(z.string()),
+  workDir: z.string().optional(),
+  timeoutS: z.number().int().default(60),
+  env: z.record(z.string(), z.string()).default({}),
+  declaredOutputs: z.array(z.string()).default([]),
+});
+export type SandboxExecParams = z.infer<typeof SandboxExecParamsSchema>;
+
+export const SandboxExecResultSchema = z.object({
+  runId: z.string(),
+  exitCode: z.number().int(),
+  stdoutTail: z.array(z.string()),
+  stderrTail: z.array(z.string()),
+  durationMs: z.number().int(),
+  timedOut: z.boolean(),
+  outputArtifacts: z.array(z.string()),
+});
+export type SandboxExecResult = z.infer<typeof SandboxExecResultSchema>;
