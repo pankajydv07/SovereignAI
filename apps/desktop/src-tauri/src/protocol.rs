@@ -227,3 +227,55 @@ pub struct SessionUpdateNotification {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<SwarajMeta>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectInfo {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
+    #[serde(default = "default_true")]
+    pub exists: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionInfo {
+    pub session_id: String,
+    pub project_id: String,
+    pub title: String,
+    pub status: String,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionEvent {
+    pub session_id: String,
+    pub seq: i64,
+    pub event_type: String,
+    pub payload: serde_json::Value,
+    pub payload_version: i64,
+    pub created_at_ms: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileNode {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_capped: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_entries: Option<usize>,
+}

@@ -242,6 +242,42 @@ class SessionCloseParams(ProtocolBaseModel):
 
 class SessionListParams(ProtocolBaseModel):
     project_id: str | None = Field(default=None, alias="projectId")
+
+
+class ProjectInfo(ProtocolBaseModel):
+    id: str
+    name: str
+    path: str
+    created_at_ms: int = Field(alias="createdAtMs")
+    updated_at_ms: int = Field(alias="updatedAtMs")
+    exists: bool = True
+
+
+class SessionInfo(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    project_id: str = Field(alias="projectId")
+    title: str
+    status: str
+    created_at_ms: int = Field(alias="createdAtMs")
+    updated_at_ms: int = Field(alias="updatedAtMs")
+
+
+class SessionEvent(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    seq: int
+    event_type: str = Field(alias="eventType")
+    payload: dict[str, Any]
+    payload_version: int = Field(default=1, alias="payloadVersion")
+    created_at_ms: int = Field(alias="createdAtMs")
+
+
+class FileNode(ProtocolBaseModel):
+    name: str
+    path: str
+    is_dir: bool = Field(alias="isDir")
+    size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    is_capped: bool | None = Field(default=None, alias="isCapped")
+    total_entries: int | None = Field(default=None, alias="totalEntries")
 '''
 
 RUST_CONTENT = '''// GENERATED FILE — DO NOT EDIT MANUALLY
@@ -473,6 +509,58 @@ pub struct SessionUpdateNotification {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<SwarajMeta>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectInfo {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
+    #[serde(default = "default_true")]
+    pub exists: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionInfo {
+    pub session_id: String,
+    pub project_id: String,
+    pub title: String,
+    pub status: String,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionEvent {
+    pub session_id: String,
+    pub seq: i64,
+    pub event_type: String,
+    pub payload: serde_json::Value,
+    pub payload_version: i64,
+    pub created_at_ms: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileNode {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_capped: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_entries: Option<usize>,
+}
 '''
 
 TS_CONTENT = '''// GENERATED FILE — DO NOT EDIT MANUALLY
@@ -681,6 +769,46 @@ export const SessionUpdateNotificationSchema = z.object({
   meta: SwarajMetaSchema.optional(),
 });
 export type SessionUpdateNotification = z.infer<typeof SessionUpdateNotificationSchema>;
+
+export const ProjectInfoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+  exists: z.boolean().default(true),
+});
+export type ProjectInfo = z.infer<typeof ProjectInfoSchema>;
+
+export const SessionInfoSchema = z.object({
+  sessionId: z.string(),
+  projectId: z.string(),
+  title: z.string(),
+  status: z.string(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+});
+export type SessionInfo = z.infer<typeof SessionInfoSchema>;
+
+export const SessionEventSchema = z.object({
+  sessionId: z.string(),
+  seq: z.number().int(),
+  eventType: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  payloadVersion: z.number().int(),
+  createdAtMs: z.number(),
+});
+export type SessionEvent = z.infer<typeof SessionEventSchema>;
+
+export const FileNodeSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  isDir: z.boolean(),
+  sizeBytes: z.number().optional(),
+  isCapped: z.boolean().optional(),
+  totalEntries: z.number().optional(),
+});
+export type FileNode = z.infer<typeof FileNodeSchema>;
 '''
 
 

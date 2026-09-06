@@ -233,10 +233,12 @@ pub fn check_physical_network_links() -> bool {
                 let p_table = buffer.as_mut_ptr() as *mut MIB_IFTABLE;
                 if GetIfTable(p_table, &mut size, 0) == 0 {
                     let table = &*p_table;
-                    for i in 0..table.dwNumEntries {
-                        let row = &table.table[i as usize];
+                    let rows = table.table.as_ptr();
+                    for i in 0..table.dwNumEntries as usize {
+                        let row = &*rows.add(i);
                         if row.dwOperStatus == 1 && row.dwType != 24 { // 24 = Software Loopback
-                            let name = String::from_utf8_lossy(&row.bDescr[..row.dwDescrLen as usize]).to_lowercase();
+                            let descr_len = (row.dwDescrLen as usize).min(row.bDescr.len());
+                            let name = String::from_utf8_lossy(&row.bDescr[..descr_len]).to_lowercase();
                             let is_virtual = name.contains("wsl")
                                 || name.contains("docker")
                                 || name.contains("vbox")

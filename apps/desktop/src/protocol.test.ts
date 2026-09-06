@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,62 +18,47 @@ function readFixture(filename: string): unknown {
   return JSON.parse(content);
 }
 
-function runTests(): void {
-  console.log("Running TypeScript Protocol Cross-Language Tests...");
+describe("TypeScript Protocol Cross-Language Tests", () => {
+  it("validates initialize_request.json round-trip", () => {
+    const rawInit = readFixture("initialize_request.json");
+    const parsedInit = ProtocolMessageSchema.parse(rawInit);
+    expect(parsedInit).toEqual(rawInit);
+  });
 
-  // Test 1: initialize_request.json
-  const rawInit = readFixture("initialize_request.json");
-  const parsedInit = ProtocolMessageSchema.parse(rawInit);
-  assert.deepStrictEqual(parsedInit, rawInit);
-  console.log("  PASS: initialize_request.json round-trip");
+  it("validates session_update_tool_call.json round-trip", () => {
+    const rawTool = readFixture("session_update_tool_call.json");
+    const parsedTool = SessionUpdateNotificationSchema.parse(rawTool);
+    expect(parsedTool).toEqual(rawTool);
+  });
 
-  // Test 2: session_update_tool_call.json
-  const rawTool = readFixture("session_update_tool_call.json");
-  const parsedTool = SessionUpdateNotificationSchema.parse(rawTool);
-  assert.deepStrictEqual(parsedTool, rawTool);
-  console.log("  PASS: session_update_tool_call.json round-trip");
+  it("validates permission_request.json round-trip", () => {
+    const rawPerm = readFixture("permission_request.json");
+    const parsedPerm = PermissionRequestParamsSchema.parse(rawPerm);
+    expect(parsedPerm).toEqual(rawPerm);
+  });
 
-  // Test 3: permission_request.json
-  const rawPerm = readFixture("permission_request.json");
-  const parsedPerm = PermissionRequestParamsSchema.parse(rawPerm);
-  assert.deepStrictEqual(parsedPerm, rawPerm);
-  console.log("  PASS: permission_request.json round-trip");
+  it("validates diff_content_absent_optional.json", () => {
+    const rawDiff = readFixture("diff_content_absent_optional.json") as Record<string, unknown>;
+    const parsedDiff = DiffContentSchema.parse(rawDiff);
+    expect(parsedDiff.oldText).toBeUndefined();
+    expect(parsedDiff).toEqual(rawDiff);
+  });
 
-  // Test 4: diff_content_absent_optional.json
-  const rawDiff = readFixture("diff_content_absent_optional.json") as Record<string, unknown>;
-  const parsedDiff = DiffContentSchema.parse(rawDiff);
-  assert.strictEqual(parsedDiff.oldText, undefined);
-  assert.deepStrictEqual(parsedDiff, rawDiff);
-  assert.strictEqual("oldText" in parsedDiff, false);
-  console.log("  PASS: diff_content_absent_optional.json absent optional property");
+  it("validates swaraj_meta_provenance.json preservation", () => {
+    const rawMeta = readFixture("swaraj_meta_provenance.json");
+    const parsedMeta = SessionUpdateNotificationSchema.parse(rawMeta);
+    expect(parsedMeta).toEqual(rawMeta);
+    expect(parsedMeta.meta?.provenance?.confidence).toBe(0.98);
+  });
 
-  // Test 5: swaraj_meta_provenance.json
-  const rawMeta = readFixture("swaraj_meta_provenance.json");
-  const parsedMeta = SessionUpdateNotificationSchema.parse(rawMeta);
-  assert.deepStrictEqual(parsedMeta, rawMeta);
-  assert.strictEqual(parsedMeta.meta?.provenance?.confidence, 0.98);
-  console.log("  PASS: swaraj_meta_provenance.json SwarajMeta preservation");
-
-  // Test 6: Unknown variant fails loudly
-  const invalidData = {
-    sessionId: "sess-unknown",
-    update: {
-      type: "non_existent_update_variant",
-      foo: "bar",
-    },
-  };
-
-  assert.throws(
-    () => {
-      SessionUpdateNotificationSchema.parse(invalidData);
-    },
-    (err: Error) => {
-      return err.name === "ZodError";
-    }
-  );
-  console.log("  PASS: unknown variant fails loudly with ZodError");
-
-  console.log("\nAll TypeScript protocol tests passed successfully!");
-}
-
-runTests();
+  it("fails loudly with ZodError on unknown variants", () => {
+    const invalidData = {
+      sessionId: "sess-unknown",
+      update: {
+        type: "non_existent_update_variant",
+        foo: "bar",
+      },
+    };
+    expect(() => SessionUpdateNotificationSchema.parse(invalidData)).toThrow();
+  });
+});

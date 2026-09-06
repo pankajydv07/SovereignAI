@@ -204,3 +204,43 @@ export const SessionUpdateNotificationSchema = z.object({
   meta: SwarajMetaSchema.optional(),
 });
 export type SessionUpdateNotification = z.infer<typeof SessionUpdateNotificationSchema>;
+
+export const ProjectInfoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  path: z.string(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+  exists: z.boolean().default(true),
+});
+export type ProjectInfo = z.infer<typeof ProjectInfoSchema>;
+
+export const SessionInfoSchema = z.object({
+  sessionId: z.string(),
+  projectId: z.string(),
+  title: z.string(),
+  status: z.string(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+});
+export type SessionInfo = z.infer<typeof SessionInfoSchema>;
+
+export const SessionEventSchema = z.object({
+  sessionId: z.string(),
+  seq: z.number().int(),
+  eventType: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  payloadVersion: z.number().int(),
+  createdAtMs: z.number(),
+});
+export type SessionEvent = z.infer<typeof SessionEventSchema>;
+
+export const FileNodeSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  isDir: z.boolean(),
+  sizeBytes: z.number().optional(),
+  isCapped: z.boolean().optional(),
+  totalEntries: z.number().optional(),
+});
+export type FileNode = z.infer<typeof FileNodeSchema>;

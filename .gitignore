@@ -1,1 +1,53 @@
-node_modules
+# Dependencies
+node_modules/
+apps/desktop/node_modules/
+.pnpm-store/
+
+# Frontend build output
+apps/desktop/dist/
+apps/desktop/.vite/
+
+# Tauri and Rust build output
+apps/desktop/src-tauri/target/
+target/
+**/*.rs.bk
+
+# Python environments and caches
+.venv/
+core/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local application state
+*.db
+*.db-shm
+*.db-wal
+sessions.db
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Generated bundles and archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

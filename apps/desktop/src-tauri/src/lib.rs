@@ -2,10 +2,14 @@ pub mod protocol;
 pub mod pty;
 pub mod sidecar;
 pub mod sovereignty;
+pub mod workspace;
 
+use protocol::{FileNode, ProjectInfo};
 use pty::PtyManager;
 use sidecar::{CoreState, CoreSupervisor};
 use sovereignty::{EgressEvent, SovereigntyState, SovereigntyStatus};
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{Manager, State};
 
@@ -13,6 +17,44 @@ struct AppState {
     supervisor: Arc<CoreSupervisor>,
     pty_manager: PtyManager,
     sovereignty: SovereigntyState,
+    app_data_dir: Option<PathBuf>,
+}
+
+fn get_settings_path(app_data_dir: &Option<PathBuf>) -> Option<PathBuf> {
+    app_data_dir.as_ref().map(|p| p.join("settings.json"))
+}
+
+fn load_recent_projects_internal(app_data_dir: &Option<PathBuf>) -> Vec<ProjectInfo> {
+    let path = match get_settings_path(app_data_dir) {
+        Some(p) => p,
+        None => return Vec::new(),
+    };
+
+    if !path.exists() {
+        return Vec::new();
+    }
+
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut projects: Vec<ProjectInfo> = serde_json::from_str(&content).unwrap_or_default();
+    for p in &mut projects {
+        p.exists = std::path::Path::new(&p.path).exists();
+    }
+    projects
+}
+
+fn save_recent_projects_internal(app_data_dir: &Option<PathBuf>, projects: &[ProjectInfo]) {
+    if let Some(path) = get_settings_path(app_data_dir) {
+        if let Some(parent) = path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        if let Ok(json) = serde_json::to_string_pretty(projects) {
+            let _ = fs::write(path, json);
+        }
+    }
 }
 
 #[tauri::command]
@@ -56,6 +98,55 @@ async fn cancel_chat_stream(
 }
 
 #[tauri::command]
+async fn invoke_core_rpc(
+    state: State<'_, AppState>,
+    method: String,
+    params: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    state
+        .supervisor
+        .send_rpc_request(&method, params)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_recent_projects(state: State<'_, AppState>) -> Result<Vec<ProjectInfo>, String> {
+    Ok(load_recent_projects_internal(&state.app_data_dir))
+}
+
+#[tauri::command]
+async fn add_recent_project(
+    state: State<'_, AppState>,
+    project: ProjectInfo,
+) -> Result<Vec<ProjectInfo>, String> {
+    let mut projects = load_recent_projects_internal(&state.app_data_dir);
+    projects.retain(|p| p.id != project.id && p.path != project.path);
+    projects.insert(0, project);
+    save_recent_projects_internal(&state.app_data_dir, &projects);
+    Ok(projects)
+}
+
+#[tauri::command]
+async fn remove_recent_project(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Vec<ProjectInfo>, String> {
+    let mut projects = load_recent_projects_internal(&state.app_data_dir);
+    projects.retain(|p| p.id != id);
+    save_recent_projects_internal(&state.app_data_dir, &projects);
+    Ok(projects)
+}
+
+#[tauri::command]
+async fn read_workspace_dir(
+    workspace_root: String,
+    rel_path: Option<String>,
+) -> Result<Vec<FileNode>, String> {
+    workspace::read_workspace_dir(&workspace_root, rel_path.as_deref())
+}
+
+#[tauri::command]
 async fn create_pty(
     app_handle: tauri::AppHandle,
     state: State<'_, AppState>,
@@ -69,8 +160,6 @@ async fn create_pty(
         .create_pty(&app_handle, id, rows, cols, cwd)
 }
 
-/// Write bytes to PTY stdin.
-/// NOTE: Reserved strictly for human USER interactive terminal input.
 #[tauri::command]
 async fn write_pty(
     state: State<'_, AppState>,
@@ -134,7 +223,7 @@ pub fn run() {
     tauri::Builder::default()
         .setup(move |app| {
             let app_data_dir = app.path().app_data_dir().ok();
-            let sovereignty = SovereigntyState::new(app_data_dir);
+            let sovereignty = SovereigntyState::new(app_data_dir.clone());
             sovereignty.start_monitor_loop(app.handle().clone());
 
             let supervisor = Arc::new(CoreSupervisor::new(Some(app.handle().clone())));
@@ -144,10 +233,10 @@ pub fn run() {
                 supervisor,
                 pty_manager: pty_manager_clone,
                 sovereignty,
+                app_data_dir,
             });
 
-            // Start supervision background loop
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 supervisor_clone.start_supervision().await;
             });
 
@@ -159,6 +248,11 @@ pub fn run() {
             get_core_stderr_tail,
             send_chat_message,
             cancel_chat_stream,
+            invoke_core_rpc,
+            get_recent_projects,
+            add_recent_project,
+            remove_recent_project,
+            read_workspace_dir,
             create_pty,
             write_pty,
             resize_pty,
@@ -179,4 +273,3 @@ pub fn run() {
             }
         });
 }
-

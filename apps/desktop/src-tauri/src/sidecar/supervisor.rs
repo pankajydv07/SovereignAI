@@ -80,6 +80,47 @@ impl CoreSupervisor {
         Ok(id)
     }
 
+    pub async fn send_rpc_request(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, RpcError> {
+        let id = self.request_id_counter.fetch_add(1, Ordering::SeqCst);
+        let req = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": method,
+            "params": params,
+        });
+
+        let (tx, rx) = oneshot::channel();
+        {
+            self.pending_requests.lock().await.insert(id, tx);
+        }
+
+        let sender = {
+            let guard = self.write_tx.lock().await;
+            guard.clone().ok_or(RpcError::NotReady)?
+        };
+
+        if let Err(_e) = sender.send(format!("{}\n", req.to_string())).await {
+            self.pending_requests.lock().await.remove(&id);
+            return Err(RpcError::CoreRestarted);
+        }
+
+        match tokio::time::timeout(Duration::from_secs(5), rx).await {
+            Ok(Ok(res)) => res,
+            Ok(Err(_)) => {
+                self.pending_requests.lock().await.remove(&id);
+                Err(RpcError::CoreRestarted)
+            }
+            Err(_) => {
+                self.pending_requests.lock().await.remove(&id);
+                Err(RpcError::Timeout(Duration::from_secs(5)))
+            }
+        }
+    }
+
     pub async fn send_chat_stream(
         &self,
         role: String,

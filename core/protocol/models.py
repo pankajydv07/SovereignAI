@@ -225,3 +225,39 @@ class SessionCloseParams(ProtocolBaseModel):
 
 class SessionListParams(ProtocolBaseModel):
     project_id: str | None = Field(default=None, alias="projectId")
+
+
+class ProjectInfo(ProtocolBaseModel):
+    id: str
+    name: str
+    path: str
+    created_at_ms: int = Field(alias="createdAtMs")
+    updated_at_ms: int = Field(alias="updatedAtMs")
+    exists: bool = True
+
+
+class SessionInfo(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    project_id: str = Field(alias="projectId")
+    title: str
+    status: str
+    created_at_ms: int = Field(alias="createdAtMs")
+    updated_at_ms: int = Field(alias="updatedAtMs")
+
+
+class SessionEvent(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    seq: int
+    event_type: str = Field(alias="eventType")
+    payload: dict[str, Any]
+    payload_version: int = Field(default=1, alias="payloadVersion")
+    created_at_ms: int = Field(alias="createdAtMs")
+
+
+class FileNode(ProtocolBaseModel):
+    name: str
+    path: str
+    is_dir: bool = Field(alias="isDir")
+    size_bytes: int | None = Field(default=None, alias="sizeBytes")
+    is_capped: bool | None = Field(default=None, alias="isCapped")
+    total_entries: int | None = Field(default=None, alias="totalEntries")

@@ -1,28 +1,60 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import { TopBar } from "./components/TopBar";
-import { LeftRail } from "./components/LeftRail";
+import { LeftRail, LeftRailTab } from "./components/LeftRail";
 import { ConversationPane } from "./components/ConversationPane";
 import { TerminalPane } from "./components/TerminalPane";
 import { SovereigntyScreen, SovereigntyStatus } from "./components/SovereigntyScreen";
-import { CoreState } from "./protocol";
-import { Shield, Zap, RefreshCw, Terminal, CheckCircle2, AlertOctagon, MessageSquare, Activity } from "lucide-react";
+import { ProjectLauncher } from "./components/ProjectLauncher";
+import { SessionList } from "./components/SessionList";
+import { FileTree } from "./components/FileTree";
+import { CoreState, ProjectInfo } from "./protocol";
+import { initialProjectState, projectReducer } from "./reducers/projectReducer";
+import { initialSessionState, sessionReducer } from "./reducers/sessionReducer";
+import { Shield, Zap, MessageSquare } from "lucide-react";
 
 export const App: React.FC = () => {
   const [coreState, setCoreState] = useState<CoreState>({ type: "connecting" });
   const [activeTab, setActiveTab] = useState<"chat" | "diagnostics" | "sovereignty">("chat");
+  const [leftRailTab, setLeftRailTab] = useState<LeftRailTab>("launcher");
   const [egressCount, setEgressCount] = useState<number>(0);
   const [isAirGapped, setIsAirGapped] = useState<boolean>(true);
 
+  const [projState, dispatchProj] = useReducer(projectReducer, initialProjectState);
+  const [sessState, dispatchSess] = useReducer(sessionReducer, initialSessionState);
+
+  const activeProject = projState.projects.find((p) => p.id === projState.activeProjectId) || null;
+
+  // Initial setup & Tauri IPC event subscriptions
   useEffect(() => {
-    // Check if running inside Tauri context
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
     if (!isTauri) {
-      // Browser fallback demo state
-      setCoreState({
-        type: "ready",
-        version: "0.1.0",
-        protocol_version: "2024-11-05",
+      setCoreState({ type: "ready", version: "0.1.0", protocol_version: "2026-03-01" });
+      dispatchProj({
+        type: "SET_PROJECTS",
+        payload: [
+          {
+            id: "proj-demo-1",
+            name: "IOCL Gujarat Refinery Inspection",
+            path: "d:/SovereignAI",
+            createdAtMs: Date.now() - 86400000,
+            updatedAtMs: Date.now(),
+            exists: true,
+          },
+        ],
+      });
+      dispatchSess({
+        type: "SET_SESSIONS",
+        payload: [
+          {
+            sessionId: "sess-demo-01",
+            projectId: "proj-demo-1",
+            title: "Crude Distillation Column Review",
+            status: "active",
+            createdAtMs: Date.now() - 3600000,
+            updatedAtMs: Date.now(),
+          },
+        ],
       });
       return;
     }
@@ -30,22 +62,32 @@ export const App: React.FC = () => {
     let unlistenFn: (() => void) | undefined;
     let unlistenSov: (() => void) | undefined;
 
-    const setupCoreConnection = async () => {
+    const setupApp = async () => {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const { listen } = await import("@tauri-apps/api/event");
 
-        // Query initial state
-        const initialState = await invoke<CoreState>("get_core_status");
-        setCoreState(initialState);
+        const status = await invoke<CoreState>("get_core_status");
+        setCoreState(status);
 
         const sovStatus = await invoke<SovereigntyStatus>("get_sovereignty_status");
         setEgressCount(sovStatus.egress_count);
         setIsAirGapped(!sovStatus.active_link);
 
-        // Listen for core state changes
+        // Fetch recent projects from Rust
+        dispatchProj({ type: "SET_LOADING", stage: "loading recent projects...", elapsedMs: 100 });
+        const recent = await invoke<ProjectInfo[]>("get_recent_projects");
+        dispatchProj({ type: "SET_PROJECTS", payload: recent });
+
         unlistenFn = await listen<CoreState>("core-status-changed", (event) => {
           setCoreState(event.payload);
+          if (event.payload.type === "failed" || event.payload.type === "restarting") {
+            dispatchSess({
+              type: "SET_DEGRADED",
+              message: "Agent core unavailable — projects can be opened, sessions unavailable.",
+              remedyLabel: "Retry Core",
+            });
+          }
         });
 
         unlistenSov = await listen<SovereigntyStatus>("sovereignty-status-changed", (event) => {
@@ -53,11 +95,11 @@ export const App: React.FC = () => {
           setIsAirGapped(!event.payload.active_link);
         });
       } catch (err) {
-        console.error("Failed to connect to Tauri core supervisor:", err);
+        dispatchProj({ type: "SET_ERROR", message: String(err), remedyLabel: "Retry Load" });
       }
     };
 
-    setupCoreConnection();
+    setupApp();
 
     return () => {
       if (unlistenFn) unlistenFn();
@@ -65,25 +107,140 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const handleKillCore = async () => {
+  const fetchSessionsForProject = async (project: ProjectInfo) => {
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (!isTauri) return;
+
+    dispatchSess({ type: "SET_LOADING", stage: "fetching session list...", elapsedMs: 50 });
     try {
-      const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-      if (isTauri) {
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("kill_core_process");
-      } else {
-        // Mock restart in web demo mode
-        setCoreState({ type: "restarting", attempt: 1 });
-        setTimeout(() => {
-          setCoreState({
-            type: "ready",
-            version: "0.1.0",
-            protocol_version: "2024-11-05",
-          });
-        }, 1500);
-      }
+      const { invoke } = await import("@tauri-apps/api/core");
+      const res = await invoke<any>("invoke_core_rpc", {
+        method: "session/list",
+        params: { projectId: project.id, projectPath: project.path },
+      });
+      dispatchSess({ type: "SET_SESSIONS", payload: res.sessions || [] });
     } catch (err) {
-      console.error("Failed to kill core process:", err);
+      dispatchSess({
+        type: "SET_DEGRADED",
+        message: "Agent core unavailable — projects can be opened, sessions unavailable.",
+        remedyLabel: "Retry Core",
+      });
+    }
+  };
+
+  const handleSelectProject = (project: ProjectInfo) => {
+    dispatchProj({ type: "SET_ACTIVE_PROJECT", id: project.id });
+    setLeftRailTab("sessions");
+    fetchSessionsForProject(project);
+  };
+
+  const handleOpenFolder = async () => {
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    const selected = window.prompt("Enter absolute project folder path:");
+    if (!selected || !selected.trim()) return;
+    const path = selected.trim();
+    const folderName = path.split(/[\/\\]/).pop() || path;
+    const newProj: ProjectInfo = {
+      id: `proj-${Date.now()}`,
+      name: folderName,
+      path: path,
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+      exists: true,
+    };
+    if (isTauri) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const updated = await invoke<ProjectInfo[]>("add_recent_project", { project: newProj });
+        dispatchProj({ type: "SET_PROJECTS", payload: updated });
+      } catch (err) {
+        console.error("Failed to add recent project:", err);
+      }
+    } else {
+      dispatchProj({ type: "ADD_PROJECT", payload: newProj });
+    }
+    handleSelectProject(newProj);
+  };
+
+  const handleRemoveProject = async (id: string) => {
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (!isTauri) {
+      dispatchProj({ type: "REMOVE_PROJECT", id });
+      return;
+    }
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const updated = await invoke<ProjectInfo[]>("remove_recent_project", { id });
+      dispatchProj({ type: "SET_PROJECTS", payload: updated });
+    } catch (err) {
+      console.error("Failed to remove project:", err);
+    }
+  };
+
+  const handleNewSession = async () => {
+    if (!activeProject) return;
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (!isTauri) return;
+
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const newSess = await invoke<any>("invoke_core_rpc", {
+        method: "session/new",
+        params: { projectId: activeProject.id, projectPath: activeProject.path },
+      });
+      dispatchSess({ type: "ADD_SESSION", payload: newSess });
+      setActiveTab("chat");
+    } catch (err) {
+      console.error("Failed to create new session:", err);
+    }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    if (!activeProject) return;
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (!isTauri) {
+      dispatchSess({ type: "SET_ACTIVE_SESSION", id: sessionId });
+      setActiveTab("chat");
+      return;
+    }
+
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const res = await invoke<any>("invoke_core_rpc", {
+        method: "session/load",
+        params: { sessionId, projectPath: activeProject.path },
+      });
+      dispatchSess({ type: "SET_SESSION_LOADED", session: res.session, events: res.events });
+      setActiveTab("chat");
+    } catch (err) {
+      console.error("Failed to load session:", err);
+    }
+  };
+
+  const handleCloseSession = async (sessionId: string) => {
+    if (!activeProject) return;
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (!isTauri) {
+      dispatchSess({ type: "UPDATE_SESSION_STATUS", id: sessionId, status: "closed" });
+      return;
+    }
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("invoke_core_rpc", {
+        method: "session/close",
+        params: { sessionId, projectPath: activeProject.path },
+      });
+      dispatchSess({ type: "UPDATE_SESSION_STATUS", id: sessionId, status: "closed" });
+    } catch (err) {
+      console.error("Failed to close session:", err);
+    }
+  };
+
+  const handleKillCore = async () => {
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    if (isTauri) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("kill_core_process");
     }
   };
 
@@ -100,169 +257,100 @@ export const App: React.FC = () => {
       {/* Main Container */}
       <div className="flex flex-1 overflow-hidden">
         {/* 56px Left Rail */}
-        <LeftRail />
+        <LeftRail activeTab={leftRailTab} onTabChange={setLeftRailTab} />
+
+        {/* Dynamic Sidebar Drawer */}
+        {leftRailTab === "sessions" && (
+          <SessionList
+            sessions={sessState.sessions}
+            activeSessionId={sessState.activeSessionId}
+            uiState={sessState.uiState}
+            onSelectSession={handleSelectSession}
+            onNewSession={handleNewSession}
+            onCloseSession={handleCloseSession}
+            onRetry={() => activeProject && fetchSessionsForProject(activeProject)}
+          />
+        )}
+
+        {leftRailTab === "files" && (
+          <FileTree workspaceRoot={activeProject ? activeProject.path : "d:/SovereignAI"} />
+        )}
 
         {/* Content Viewport */}
         <main className="flex-1 flex flex-col bg-bg overflow-hidden">
-          {/* Console Sub-Header / View Selector */}
-          <div className="h-9 bg-surface border-b border-border px-4 flex items-center justify-between text-xs select-none">
-            <div className="flex items-center gap-1 font-mono">
-              <button
-                onClick={() => setActiveTab("chat")}
-                className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  activeTab === "chat"
-                    ? "bg-surface-2 text-accent font-semibold border border-border"
-                    : "text-text-dim hover:text-text"
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>STREAMING CONSOLE</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("sovereignty")}
-                className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  activeTab === "sovereignty"
-                    ? "bg-surface-2 text-sovereign font-semibold border border-border"
-                    : "text-text-dim hover:text-text"
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5 text-sovereign" />
-                <span>SOVEREIGNTY MONITOR</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("diagnostics")}
-                className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  activeTab === "diagnostics"
-                    ? "bg-surface-2 text-accent font-semibold border border-border"
-                    : "text-text-dim hover:text-text"
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>SUPERVISOR DIAGNOSTICS</span>
-              </button>
-            </div>
+          {leftRailTab === "launcher" ? (
+            <ProjectLauncher
+              projects={projState.projects}
+              activeProjectId={projState.activeProjectId}
+              uiState={projState.uiState}
+              onSelectProject={handleSelectProject}
+              onOpenFolder={handleOpenFolder}
+              onRemoveProject={handleRemoveProject}
+              onRetry={() => {
+                const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+                if (isTauri) {
+                  import("@tauri-apps/api/core").then(({ invoke }) =>
+                    invoke<ProjectInfo[]>("get_recent_projects").then((p) =>
+                      dispatchProj({ type: "SET_PROJECTS", payload: p })
+                    )
+                  );
+                }
+              }}
+              isAirGapped={isAirGapped}
+            />
+          ) : (
+            <>
+              {/* Console Sub-Header */}
+              <div className="h-9 bg-surface border-b border-border px-4 flex items-center justify-between text-xs select-none">
+                <div className="flex items-center gap-1 font-mono">
+                  <button
+                    onClick={() => setActiveTab("chat")}
+                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      activeTab === "chat"
+                        ? "bg-surface-2 text-accent font-semibold border border-border"
+                        : "text-text-dim hover:text-text"
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>STREAMING CONSOLE</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("sovereignty")}
+                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
+                      activeTab === "sovereignty"
+                        ? "bg-surface-2 text-sovereign font-semibold border border-border"
+                        : "text-text-dim hover:text-text"
+                    }`}
+                  >
+                    <Shield className="w-3.5 h-3.5 text-sovereign" />
+                    <span>SOVEREIGNTY MONITOR</span>
+                  </button>
+                </div>
 
-            <div className="flex items-center gap-2 font-mono text-[11px]">
-              {process.env.NODE_ENV !== "production" && (
-                <button
-                  onClick={handleKillCore}
-                  className="px-2 py-0.5 rounded bg-critical/10 border border-critical/30 text-critical hover:bg-critical/20 flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <Zap className="w-3 h-3" />
-                  Simulate Core Crash
-                </button>
-              )}
-            </div>
-          </div>
-
-          {activeTab === "chat" && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <ConversationPane />
-              </div>
-              <TerminalPane />
-            </div>
-          )}
-
-          {activeTab === "sovereignty" && <SovereigntyScreen />}
-
-          {activeTab === "diagnostics" && (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-bg overflow-y-auto">
-                <div className="max-w-xl w-full p-6 bg-surface border border-border rounded text-left space-y-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-sovereign" />
-                      <span className="font-mono text-xs font-semibold text-accent">P0.3 — STREAMING CHAT THROUGH CORE</span>
-                    </div>
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-sovereign/10 text-sovereign border border-sovereign/20">
-                      NO LISTENING SOCKET
-                    </span>
-                  </div>
-
-                  <h1 className="text-sm font-semibold text-text">Rust ↔ Python Stdio JSON-RPC Supervisor</h1>
-
-                  <p className="text-xs text-text-dim leading-relaxed">
-                    Rust supervises the Python Agent Core child process over piped <code className="text-accent">stdin/stdout/stderr</code>.
-                    Chat requests stream through Ollama via stdio JSON-RPC <code className="text-accent">chat/stream</code>.
-                  </p>
-
-                  {/* Core Status Card */}
-                  <div className="p-3 bg-surface-2 border border-border rounded font-mono text-xs space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-dim">Sidecar State:</span>
-                      <span className="text-text font-bold">
-                        {coreState.type === "ready" && (
-                          <span className="text-sovereign flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> READY (v{coreState.version} / ACP {coreState.protocol_version})
-                          </span>
-                        )}
-                        {coreState.type === "restarting" && (
-                          <span className="text-verify flex items-center gap-1">
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" /> RESTARTING (Attempt {coreState.attempt}/5)
-                          </span>
-                        )}
-                        {coreState.type === "connecting" && (
-                          <span className="text-verify flex items-center gap-1">
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" /> CONNECTING
-                          </span>
-                        )}
-                        {coreState.type === "failed" && (
-                          <span className="text-critical flex items-center gap-1">
-                            <AlertOctagon className="w-3.5 h-3.5" /> FAILED
-                          </span>
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-text-dim">IPC Transport:</span>
-                      <span className="text-accent">stdio (Piped Child stdin/stdout)</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-text-dim">Supervision Guarantee:</span>
-                      <span className="text-text">Bounded restarts (&lt;= 5 attempts), orphan job lock</span>
-                    </div>
-                  </div>
-
-                  {/* Stderr Diagnostics Tail Panel on Failure */}
-                  {coreState.type === "failed" && (
-                    <div className="space-y-2 border-t border-critical/30 pt-3">
-                      <div className="flex items-center justify-between text-xs font-mono text-critical font-semibold">
-                        <span>CORE SUPERVISOR FAILURE REASON:</span>
-                        <span>{coreState.reason}</span>
-                      </div>
-                      <div className="p-3 bg-bg border border-border rounded font-mono text-[11px] text-text-dim max-h-48 overflow-y-auto space-y-1">
-                        <div className="text-text-faint uppercase font-bold text-[10px] mb-1">
-                          --- STDERR TAIL (LAST 50 LINES) ---
-                        </div>
-                        {coreState.stderr_tail && coreState.stderr_tail.length > 0 ? (
-                          coreState.stderr_tail.map((line, idx) => (
-                            <div key={idx} className="whitespace-pre-wrap break-all text-critical/90">
-                              {line}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-text-faint">No stderr lines captured.</div>
-                        )}
-                      </div>
-                      <div className="p-2 rounded bg-verify/10 border border-verify/30 text-verify text-xs font-mono">
-                        REMEDY: Verify Python virtual environment with <code className="text-text font-bold">make setup</code>.
-                      </div>
-                    </div>
+                <div className="flex items-center gap-2 font-mono text-[11px]">
+                  {process.env.NODE_ENV !== "production" && (
+                    <button
+                      onClick={handleKillCore}
+                      className="px-2 py-0.5 rounded bg-critical/10 border border-critical/30 text-critical hover:bg-critical/20 flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3" />
+                      Simulate Crash
+                    </button>
                   )}
-
-                  {/* Action Bar */}
-                  <div className="pt-2 border-t border-border flex items-center justify-between text-[11px] font-mono">
-                    <span className="text-text-dim flex items-center gap-1 ml-auto">
-                      <Terminal className="w-3.5 h-3.5" />
-                      Zero Ports Bound
-                    </span>
-                  </div>
                 </div>
               </div>
-              <TerminalPane />
-            </div>
+
+              {activeTab === "chat" && (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 overflow-hidden flex flex-col">
+                    <ConversationPane />
+                  </div>
+                  <TerminalPane />
+                </div>
+              )}
+
+              {activeTab === "sovereignty" && <SovereigntyScreen />}
+            </>
           )}
         </main>
       </div>
