@@ -13,6 +13,7 @@ if str(core_root) not in sys.path:
 
 from models.ollama import OllamaApiError, OllamaClient, OllamaUnreachableError  # noqa: E402
 from models.registry import ModelNotInstalledError, ModelRegistry, NoModelForRoleError  # noqa: E402
+from storage import SessionNotFoundError, SessionStore  # noqa: E402
 
 SUPPORTED_PROTOCOL_VERSION = "2024-11-05"
 
@@ -20,12 +21,31 @@ SUPPORTED_PROTOCOL_VERSION = "2024-11-05"
 registry = ModelRegistry()
 ollama_client = OllamaClient()
 active_streams: dict[Any, asyncio.Task[None]] = {}
+session_stores: dict[str, SessionStore] = {}
 
 
 def log_stderr(message: str) -> None:
     """Write diagnostic messages exclusively to stderr."""
     sys.stderr.write(f"[core] {message}\n")
     sys.stderr.flush()
+
+
+def get_session_store(
+    project_path: str | Path | None = None,
+    db_path: str | Path | None = None,
+) -> SessionStore:
+    """Resolve or cache SessionStore instance based on project path or db path."""
+    if db_path:
+        target = Path(db_path).resolve()
+    elif project_path:
+        target = Path(project_path).resolve() / ".swaraj" / "sessions.db"
+    else:
+        target = Path.home() / ".swaraj" / "sessions.db"
+
+    target_str = str(target)
+    if target_str not in session_stores:
+        session_stores[target_str] = SessionStore(target)
+    return session_stores[target_str]
 
 
 def send_rpc_response(response: dict[str, Any]) -> None:
@@ -48,6 +68,9 @@ async def handle_chat_stream(msg_id: Any, params: dict[str, Any]) -> None:
     """Stream chat response from Ollama for a requested role."""
     role_name = params.get("role", "writer")
     messages = params.get("messages", [])
+    session_id = params.get("sessionId")
+    project_path = params.get("projectPath")
+    db_path = params.get("dbPath")
 
     try:
         model_tag = registry.resolve(role_name)
@@ -58,6 +81,17 @@ async def handle_chat_stream(msg_id: Any, params: dict[str, Any]) -> None:
             "error": {"code": -32001, "message": str(exc)},
         })
         return
+
+    store = get_session_store(project_path=project_path, db_path=db_path)
+    if session_id:
+        try:
+            await store.append_event(
+                session_id,
+                "message_started",
+                {"role": role_name, "model": model_tag, "messages": messages},
+            )
+        except Exception as err:
+            log_stderr(f"Failed to record message_started event: {err}")
 
     overrides = registry.get_overrides(model_tag)
     keep_alive = overrides.get("keep_alive", "30m")
@@ -108,6 +142,22 @@ async def handle_chat_stream(msg_id: Any, params: dict[str, Any]) -> None:
                 "content": accumulated_content,
                 "thinking": accumulated_thinking,
             })
+
+        if session_id:
+            try:
+                await store.append_event(
+                    session_id,
+                    "message_completed",
+                    {
+                        "role": role_name,
+                        "model": model_tag,
+                        "content": accumulated_content,
+                        "thinking": accumulated_thinking,
+                        "metrics": metrics,
+                    },
+                )
+            except Exception as err:
+                log_stderr(f"Failed to record message_completed event: {err}")
 
         send_rpc_response({
             "jsonrpc": "2.0",
@@ -182,6 +232,7 @@ async def handle_rpc_message(line: str) -> bool:
                     "status": status,
                     "capabilities": {
                         "agent_loop": False,
+                        "session_store": True,
                         "tools": [],
                     },
                 },
@@ -193,6 +244,116 @@ async def handle_rpc_message(line: str) -> bool:
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {"status": "pong"},
+            })
+            return True
+
+        if method == "session/new":
+            project_id = params.get("projectId", "default-project")
+            title = params.get("title")
+            project_path = params.get("projectPath")
+            db_path = params.get("dbPath")
+            session_id = params.get("sessionId")
+
+            if not session_id:
+                import uuid
+                session_id = str(uuid.uuid4())
+
+            store = get_session_store(project_path=project_path, db_path=db_path)
+            res = await store.create_session(session_id, project_id, title)
+            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
+            return True
+
+        if method == "session/load":
+            session_id = params.get("sessionId")
+            project_path = params.get("projectPath")
+            db_path = params.get("dbPath")
+
+            if not session_id:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32602, "message": "Missing 'sessionId' param"},
+                })
+                return True
+
+            store = get_session_store(project_path=project_path, db_path=db_path)
+            try:
+                session_info = await store.get_session(session_id)
+                events = await store.load_session_events(session_id)
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {"session": session_info, "events": events},
+                })
+            except SessionNotFoundError as err:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32004, "message": str(err)},
+                })
+            return True
+
+        if method == "session/resume":
+            session_id = params.get("sessionId")
+            project_path = params.get("projectPath")
+            db_path = params.get("dbPath")
+
+            if not session_id:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32602, "message": "Missing 'sessionId' param"},
+                })
+                return True
+
+            store = get_session_store(project_path=project_path, db_path=db_path)
+            try:
+                res = await store.resume_session(session_id)
+                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
+            except SessionNotFoundError as err:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32004, "message": str(err)},
+                })
+            return True
+
+        if method == "session/close":
+            session_id = params.get("sessionId")
+            project_path = params.get("projectPath")
+            db_path = params.get("dbPath")
+
+            if not session_id:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32602, "message": "Missing 'sessionId' param"},
+                })
+                return True
+
+            store = get_session_store(project_path=project_path, db_path=db_path)
+            try:
+                res = await store.close_session(session_id)
+                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
+            except SessionNotFoundError as err:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32004, "message": str(err)},
+                })
+            return True
+
+        if method == "session/list":
+            project_id = params.get("projectId")
+            project_path = params.get("projectPath")
+            db_path = params.get("dbPath")
+
+            store = get_session_store(project_path=project_path, db_path=db_path)
+            sessions = await store.list_sessions(project_id=project_id)
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"sessions": sessions},
             })
             return True
 
@@ -262,3 +423,4 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
