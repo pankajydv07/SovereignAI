@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiosqlite
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 CREATE_TABLES_SQL = """
 PRAGMA journal_mode = WAL;
@@ -158,6 +158,24 @@ CREATE TABLE IF NOT EXISTS calc_executions (
     FOREIGN KEY(session_id) REFERENCES sessions(id)
 );
 
+CREATE TABLE IF NOT EXISTS audit_records (
+    record_index INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_id TEXT NOT NULL UNIQUE,
+    run_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    plan_json TEXT NOT NULL,
+    steps_json TEXT NOT NULL,
+    documents_retrieved_json TEXT NOT NULL,
+    models_used_json TEXT NOT NULL,
+    deliverables_json TEXT NOT NULL,
+    approval_event_json TEXT,
+    prev_hash TEXT NOT NULL,
+    record_hash TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id, updated_at_ms DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session_seq ON events(session_id, seq);
 CREATE INDEX IF NOT EXISTS idx_steps_session ON steps(session_id, step_index);
@@ -166,6 +184,7 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_session ON artifacts(session_id);
 CREATE INDEX IF NOT EXISTS idx_kb_chunk_roles ON kb_chunk_roles(role, chunk_id);
 CREATE INDEX IF NOT EXISTS idx_kb_documents_effective ON kb_documents(effective_date, superseded_by);
 CREATE INDEX IF NOT EXISTS idx_kb_chunks_doc ON kb_chunks(doc_id, chunk_index);
+CREATE INDEX IF NOT EXISTS idx_audit_records_run ON audit_records(run_id);
 
 CREATE TRIGGER IF NOT EXISTS prevent_event_update
 BEFORE UPDATE ON events
@@ -177,6 +196,18 @@ CREATE TRIGGER IF NOT EXISTS prevent_event_delete
 BEFORE DELETE ON events
 BEGIN
     SELECT RAISE(ABORT, 'events table is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS prevent_audit_update
+BEFORE UPDATE ON audit_records
+BEGIN
+    SELECT RAISE(ABORT, 'audit_records table is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS prevent_audit_delete
+BEFORE DELETE ON audit_records
+BEGIN
+    SELECT RAISE(ABORT, 'audit_records table is append-only');
 END;
 """
 

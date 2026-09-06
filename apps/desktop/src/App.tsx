@@ -9,14 +9,16 @@ import { SessionList } from "./components/SessionList";
 import { FileTree } from "./components/FileTree";
 import { ReviewApprovePanel } from "./components/ReviewApprovePanel";
 import { PIDAnalysisView } from "./components/PIDAnalysisView";
+import { AuditChainPanel } from "./components/AuditChainPanel";
+import { AttestationMetricsPanel } from "./components/AttestationMetricsPanel";
+import { ConsoleSubHeader } from "./components/ConsoleSubHeader";
 import { CoreState, ProjectInfo } from "./protocol";
 import { initialProjectState, projectReducer } from "./reducers/projectReducer";
 import { initialSessionState, sessionReducer } from "./reducers/sessionReducer";
-import { Shield, Zap, MessageSquare, FileCheck, Layers } from "lucide-react";
 
 export const App: React.FC = () => {
   const [coreState, setCoreState] = useState<CoreState>({ type: "connecting" });
-  const [activeTab, setActiveTab] = useState<"chat" | "diagnostics" | "sovereignty" | "review" | "pid">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "diagnostics" | "sovereignty" | "review" | "pid" | "audit" | "attestation">("chat");
   const [leftRailTab, setLeftRailTab] = useState<LeftRailTab>("launcher");
   const [egressCount, setEgressCount] = useState<number>(0);
   const [isAirGapped, setIsAirGapped] = useState<boolean>(true);
@@ -302,67 +304,11 @@ export const App: React.FC = () => {
             />
           ) : (
             <>
-              {/* Console Sub-Header */}
-              <div className="h-9 bg-surface border-b border-border px-4 flex items-center justify-between text-xs select-none">
-                <div className="flex items-center gap-1 font-mono">
-                  <button
-                    onClick={() => setActiveTab("chat")}
-                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                      activeTab === "chat"
-                        ? "bg-surface-2 text-accent font-semibold border border-border"
-                        : "text-text-dim hover:text-text"
-                    }`}
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>STREAMING CONSOLE</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("sovereignty")}
-                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                      activeTab === "sovereignty"
-                        ? "bg-surface-2 text-sovereign font-semibold border border-border"
-                        : "text-text-dim hover:text-text"
-                    }`}
-                  >
-                    <Shield className="w-3.5 h-3.5 text-sovereign" />
-                    <span>SOVEREIGNTY MONITOR</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("review")}
-                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                      activeTab === "review"
-                        ? "bg-surface-2 text-[#F59E0B] font-semibold border border-border"
-                        : "text-text-dim hover:text-text"
-                    }`}
-                  >
-                    <FileCheck className="w-3.5 h-3.5 text-[#F59E0B]" />
-                    <span>REVIEW & APPROVE</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("pid")}
-                    className={`px-3 py-1 rounded text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
-                      activeTab === "pid"
-                        ? "bg-surface-2 text-[#06B6D4] font-semibold border border-border"
-                        : "text-text-dim hover:text-text"
-                    }`}
-                  >
-                    <Layers className="w-3.5 h-3.5 text-[#06B6D4]" />
-                    <span>P&ID VISION</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 font-mono text-[11px]">
-                  {process.env.NODE_ENV !== "production" && (
-                    <button
-                      onClick={handleKillCore}
-                      className="px-2 py-0.5 rounded bg-critical/10 border border-critical/30 text-critical hover:bg-critical/20 flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <Zap className="w-3 h-3" />
-                      Simulate Crash
-                    </button>
-                  )}
-                </div>
-              </div>
+              <ConsoleSubHeader
+                activeTab={activeTab}
+                onSelectTab={setActiveTab}
+                onKillCore={handleKillCore}
+              />
 
               {activeTab === "chat" && (
                 <div className="flex-1 flex flex-col overflow-hidden">
@@ -387,6 +333,10 @@ export const App: React.FC = () => {
               )}
 
               {activeTab === "pid" && <PIDAnalysisView />}
+
+              {activeTab === "audit" && <AuditChainPanel />}
+
+              {activeTab === "attestation" && <AttestationMetricsPanel />}
             </>
           )}
         </main>

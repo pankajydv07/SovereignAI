@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: manual
 description: Apply when working on the model registry, router, agent loop, prompts, or anything calling Ollama.
 ---
 
