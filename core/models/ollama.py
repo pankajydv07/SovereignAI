@@ -60,6 +60,50 @@ class OllamaClient:
                 f"Failed to connect to Ollama at {self.base_url}: {exc}"
             ) from exc
 
+    async def get_installed_models_full(self) -> list[dict[str, Any]]:
+        """Fetch list of installed models with metadata dict items via GET /api/tags."""
+        url = f"{self.base_url}/api/tags"
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    raise OllamaApiError(resp.status_code, resp.text)
+                data = resp.json()
+                return data.get("models", [])
+        except httpx.RequestError as exc:
+            raise OllamaUnreachableError(
+                f"Failed to connect to Ollama at {self.base_url}: {exc}"
+            ) from exc
+
+    async def show_model(self, model_tag: str) -> dict[str, Any]:
+        """Fetch model details and GGUF metadata via POST /api/show."""
+        url = f"{self.base_url}/api/show"
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(url, json={"name": model_tag})
+                if resp.status_code != 200:
+                    raise OllamaApiError(resp.status_code, resp.text)
+                return resp.json()
+        except httpx.RequestError as exc:
+            raise OllamaUnreachableError(
+                f"Failed to connect to Ollama at {self.base_url}: {exc}"
+            ) from exc
+
+    async def get_running_models(self) -> list[dict[str, Any]]:
+        """Fetch currently loaded models and VRAM/RAM utilization via GET /api/ps."""
+        url = f"{self.base_url}/api/ps"
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    raise OllamaApiError(resp.status_code, resp.text)
+                data = resp.json()
+                return data.get("models", [])
+        except httpx.RequestError as exc:
+            raise OllamaUnreachableError(
+                f"Failed to connect to Ollama at {self.base_url}: {exc}"
+            ) from exc
+
     async def stream_chat(
         self,
         model: str,

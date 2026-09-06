@@ -1,0 +1,594 @@
+{"prompt": "Please proceed: According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Please proceed: Translate this paragraph into Hindi for official refinery circular distribution. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1735]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1754]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. -- Reference MRPL/INSP/2026/521.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Fix IndexError: list index out of range when parsing instrument tag list. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Organise these 5 general file names into chronological order. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "[Refinery Unit 108] Read the blurred thickness gauge reading photo and extract the numbers.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "[Refinery Unit 106] Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Please proceed: Summarise the key findings of the Q3 refinery maintenance shutdown report. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1724]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Convert this text fragment into a bulleted list. -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: Extract table data from this scanned PDF image of P&ID drawing sheet 3. (Priority: High)", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1762]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "[Refinery Unit 107] What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1746]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "[Refinery Unit 109] Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1740]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1759]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Please proceed: What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 111] Reformat this text into a clean markdown table.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 111] Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. -- Reference MRPL/INSP/2026/519.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 109] According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 109] Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। (Priority: High)", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1753]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "[Refinery Unit 108] Synthesise the main recommendations from the annual environmental compliance audit.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1737]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1738]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 108] मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें।", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 108] Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: Create a script using openpyxl to generate automated monthly inspection summary reports. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "[Refinery Unit 106] Translate this paragraph into Hindi for official refinery circular distribution.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1731]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Please proceed: Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "[Refinery Unit 108] Create a script using openpyxl to generate automated monthly inspection summary reports.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1747]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "[Refinery Unit 110] कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें।", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। -- Reference MRPL/INSP/2026/522.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1764]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Please proceed: Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Extract all financial figures and budget head numbers from this purchase requisition note. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "[Refinery Unit 109] List all ISA instrument tags mentioned in the crude distillation unit equipment register.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: Convert this text fragment into a bulleted list. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Please proceed: Summarise the minutes of the DGM safety committee meeting held on 15th August. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1760]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Please proceed: Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "[Refinery Unit 108] Convert this text fragment into a bulleted list.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1739]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Please proceed: Run OCR on this scanned handwritten inspection form for pressure vessel V-104. (Priority: High)", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: Give a concise 3-paragraph summary of the pump overhaul inspection report. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. -- Reference MRPL/INSP/2026/523.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 111] Give a concise 3-paragraph summary of the pump overhaul inspection report.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1748]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Reformat this text into a clean markdown table.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1726]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1727]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "[Refinery Unit 111] Implement a script to convert raw log files from refinery boiler units into JSON format.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 107] Extract table data from this scanned PDF image of P&ID drawing sheet 3.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Please proceed: Implement a pandas function to clean equipment maintenance log dataset and export to Excel. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "[Refinery Unit 106] Run OCR on this scanned handwritten inspection form for pressure vessel V-104.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Please proceed: Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. (Priority: High)", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Please proceed: Extract all non-conformance report (NCR) serial numbers from the annual audit file. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 109] Summarise the 50-page crude distillation unit operating manual section on emergency shutdown.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 111] Extract all non-conformance report (NCR) serial numbers from the annual audit file.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 111] Fix IndexError: list index out of range when parsing instrument tag list.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 107] Summarise the key findings of the Q3 refinery maintenance shutdown report.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: List all ISA instrument tags mentioned in the crude distillation unit equipment register. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 106] Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Please proceed: Hello, who created the SWARAJ workbench system? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Please proceed: Implement a script to convert raw log files from refinery boiler units into JSON format. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1742]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें।", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 110] Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1725]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Please proceed: Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. -- Reference MRPL/INSP/2026/518.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Hello, who created the SWARAJ workbench system?", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Convert this text fragment into a bulleted list.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 110] इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें।", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1752]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1728]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Please proceed: Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. -- Reference MRPL/INSP/2026/520.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "[Refinery Unit 109] Hello, who created the SWARAJ workbench system?", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1741]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Please proceed: Synthesise the main recommendations from the annual environmental compliance audit. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1751]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1750]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 107] Extract the asset tag numbers, inspection dates, and corrosion rates from this log document.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "[Refinery Unit 107] Implement a pandas function to clean equipment maintenance log dataset and export to Excel.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1729]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "[Refinery Unit 106] Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1761]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Reformat this text into a clean markdown table. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Please proceed: What is the procedure for issuing a Hot Work Permit under refinery safety regulations? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "[Refinery Unit 108] Extract all financial figures and budget head numbers from this purchase requisition note.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Please proceed: Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1758]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें।", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "[Refinery Unit 110] Extract the minimum required wall thickness values from the ASME vessel data sheet.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "[Refinery Unit 111] OCR this scanned blueprint photo of MRPL refinery tank farm layout.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Please proceed: Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1732]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: Write a function to validate ISA instrument tag formats using regular expressions. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1749]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "[Refinery Unit 110] Write a function to validate ISA instrument tag formats using regular expressions.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 110] What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Please proceed: Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 107] Organise these 5 general file names into chronological order.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1730]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Please proceed: What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1745]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "[Refinery Unit 107] Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 108] Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "[Refinery Unit 110] List 3 general differences between centrifugal and positive displacement pumps.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: OCR this scanned blueprint photo of MRPL refinery tank farm layout. (Priority: High)", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1755]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "[Refinery Unit 109] Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "[Refinery Unit 107] Compute the hydrotest pressure required for crude storage tank T-102 per IS 803.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Please proceed: Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1745]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Please proceed: What are the mandatory PPE requirements for entry into a confined vessel space? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Extract table data from this scanned PDF image of P&ID drawing sheet 3. [Asset Tag: FT-1743]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "इस धुंधली स्कैन की गई हस्तलिखित रिपोर्ट छवि से अक्षर और आंकड़े निकालें। [Asset Tag: FT-1734]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit. -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "OCR this scanned blueprint photo of MRPL refinery tank farm layout. [Asset Tag: FT-1765]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "What does clause 4.2 of IS 456 specify regarding concrete cover in industrial marine environments? [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Provide an executive summary of the attached OISD-118 safety audit report for MRPL CDU-II. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What are the mandatory PPE requirements for entry into a confined vessel space? [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1757]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1739]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Please proceed: What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Implement a script to convert raw log files from refinery boiler units into JSON format.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1763]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations? [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1741]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "[Refinery Unit 109] Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels.", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Please proceed: Organise these 5 general file names into chronological order. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream. [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1744]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Please proceed: List 3 general differences between centrifugal and positive displacement pumps. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1754]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1753]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 106] Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Synthesise the main recommendations from the annual environmental compliance audit.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 111] Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1760]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Please proceed: Reformat this text into a clean markdown table. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Organise these 5 general file names into chronological order.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "According to MRPL safety manual, what is the frequency of hydrostatic testing for LPG spheres? [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1765]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "[Refinery Unit 106] What is the governing OISD standard clause for fire water storage capacity in Indian petroleum refineries?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Read the blurred thickness gauge reading photo and extract the numbers. [Asset Tag: FT-1756]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. -- Reference MRPL/INSP/2026/519.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate. [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "[Refinery Unit 110] Compute pressure drop across control valve FCV-201 operating at 450 m3/h flow rate.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Read the blurred thickness gauge reading photo and extract the numbers. (Priority: High)", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें।", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract all financial figures and budget head numbers from this purchase requisition note. [Asset Tag: FT-1726]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "[Refinery Unit 111] What are the mandatory PPE requirements for entry into a confined vessel space?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Give a concise 3-paragraph summary of the pump overhaul inspection report. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1762]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 107] Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "[Refinery Unit 109] Calculate heat exchanger heat duty Q = m * Cp * DeltaT for heavy naphtha stream.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Extract the minimum required wall thickness values from the ASME vessel data sheet. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1749]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1734]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1743]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "What is the procedure for issuing a Hot Work Permit under refinery safety regulations?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Organise these 5 general file names into chronological order. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Hello, who created the SWARAJ workbench system? [Asset Tag: FT-1751]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Please proceed: Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Write a function to validate ISA instrument tag formats using regular expressions. [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Summarise the minutes of the DGM safety committee meeting held on 15th August. [Asset Tag: FT-1764]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3. [Asset Tag: FT-1736]", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Please proceed: Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft a formal memorandum to the Projects Division regarding delay in P&ID drawing submission. [Asset Tag: FT-1757]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Fix KeyError: 'vram_usage' occurring in GPU telemetry logging script. [Asset Tag: FT-1761]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Hello, who created the SWARAJ workbench system? -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "[Refinery Unit 108] What is the procedure for issuing a Hot Work Permit under refinery safety regulations?", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1744]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "[Refinery Unit 106] Calculate the minimum required pipe wall thickness for 10-inch line at 35 bar operating pressure according to ASME B31.3.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "कच्चा तेल आसवन इकाई (CDU) के नियमित निरीक्षण के लिए आधिकारिक पत्र ड्राफ्ट करें। -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Draft an official PSU note proposing sanction of INR 4.5 Lakhs for OISD safety compliance training. [Asset Tag: FT-1737]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Fix TypeError: unsupported operand type(s) for +: 'int' and 'str' in boiler calculation script. [Asset Tag: FT-1733]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Draft a recommendation note seeking deviation approval from standard painting specifications for offsite piping. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Traceback (most recent call last): File 'calc.py', line 45, in <module> ZeroDivisionError: division by zero. Please fix. [Asset Tag: FT-1728]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Reformat this text into a clean markdown table. [Asset Tag: FT-1759]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Please proceed: मंगलोर रिफाइनरी हेतु पंप मरम्मत स्वीकृति टिप्पणी (Approval Note) प्रारूप तैयार करें। (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. -- Reference MRPL/INSP/2026/522.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Summarise the 50-page crude distillation unit operating manual section on emergency shutdown. [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1742]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Draft a formal approval note for DGM Mech seeking sanction for urgent procurement of mechanical seals for P-201. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Convert this text fragment into a bulleted list. [Asset Tag: FT-1756]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Summarise the key findings of the Q3 refinery maintenance shutdown report. [Asset Tag: FT-1731]", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "[Refinery Unit 106] Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages.", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Determine the maximum allowable working pressure (MAWP) for vessel V-301 given 12mm thickness and 2% corrosion allowance. -- Reference MRPL/INSP/2026/520.", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1763]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "List all ISA instrument tags mentioned in the crude distillation unit equipment register. [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Process this scanned diagram photo of flow transmitter FT-1702 and extract tag labels. [Asset Tag: FT-1733]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1758]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Extract all non-conformance report (NCR) serial numbers from the annual audit file.", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "List 3 general differences between centrifugal and positive displacement pumps. [Asset Tag: FT-1746]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Write a Python script to compute moving averages for FT-101 flow meter sensor telemetry. [Asset Tag: FT-1727]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "What are the permitted corrosion allowances under ASME Section VIII Division 1 for hydrocarbon service? [Asset Tag: FT-1755]", "has_image": false, "mime_types": [], "expected_class": "kb_qa"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1740]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract the asset tag numbers, inspection dates, and corrosion rates from this log document. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1729]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Write a Python script to parse CSV data containing refinery crude unit temperature readings and calculate hourly averages. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Create a script using openpyxl to generate automated monthly inspection summary reports. [Asset Tag: FT-1732]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Run OCR on this scanned handwritten inspection form for pressure vessel V-104. [Asset Tag: FT-1736]", "has_image": true, "mime_types": ["image/png"], "expected_class": "vision_ocr"}
+{"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. -- Reference MRPL/INSP/2026/523.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "Translate this paragraph into Hindi for official refinery circular distribution. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "other"}
+{"prompt": "Resolve SyntaxError: invalid syntax in openpyxl spreadsheet generation function. [Asset Tag: FT-1738]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "[Refinery Unit 110] Summarise the minutes of the DGM safety committee meeting held on 15th August.", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "Extract all ultrasonic thickness measurement readings and pipe schedule numbers from this inspection report. [Asset Tag: FT-1730]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Extract the minimum required wall thickness values from the ASME vessel data sheet. [Asset Tag: FT-1752]", "has_image": false, "mime_types": [], "expected_class": "doc_extract"}
+{"prompt": "Please proceed: Calculate the corrosion rate in mm/year given initial thickness 14.2mm, current thickness 11.8mm over 4 years. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
+{"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
+{"prompt": "Debug this Python snippet throwing AttributeError: 'DataFrame' object has no attribute 'append' in crude analysis pipeline. [Asset Tag: FT-1748]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}

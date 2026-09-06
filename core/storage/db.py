@@ -84,6 +84,16 @@ CREATE TABLE IF NOT EXISTS artifacts (
     FOREIGN KEY(session_id) REFERENCES sessions(id)
 );
 
+CREATE TABLE IF NOT EXISTS project_policies (
+    project_id TEXT NOT NULL,
+    tool TEXT NOT NULL,
+    resource_pattern TEXT NOT NULL,
+    policy_choice TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL,
+    PRIMARY KEY (project_id, tool, resource_pattern),
+    FOREIGN KEY(project_id) REFERENCES projects(id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id, updated_at_ms DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session_seq ON events(session_id, seq);
 CREATE INDEX IF NOT EXISTS idx_steps_session ON steps(session_id, step_index);

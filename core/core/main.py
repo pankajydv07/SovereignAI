@@ -11,6 +11,7 @@ core_root = Path(__file__).resolve().parent.parent
 if str(core_root) not in sys.path:
     sys.path.insert(0, str(core_root))
 
+from models.discovery import ModelDiscoverer  # noqa: E402
 from models.ollama import OllamaApiError, OllamaClient, OllamaUnreachableError  # noqa: E402
 from models.registry import ModelNotInstalledError, ModelRegistry, NoModelForRoleError  # noqa: E402
 from storage import SessionNotFoundError, SessionStore  # noqa: E402
@@ -372,6 +373,57 @@ async def handle_rpc_message(line: str) -> bool:
                 "id": msg_id,
                 "result": {"status": "stopped", "target_id": target_id},
             })
+            return True
+
+        if method == "models/roster":
+            try:
+                discoverer = ModelDiscoverer(ollama_client)
+                discovered = await discoverer.discover_all()
+                running = await ollama_client.get_running_models()
+                installed_tags = {d.tag for d in discovered}
+                fulfilment = registry.get_role_fulfilment_status(installed_tags, running)
+
+                roster_models = []
+                running_map = {
+                    m.get("name") or m.get("model"): m for m in running if isinstance(m, dict)
+                }
+
+                for d in discovered:
+                    is_res = d.tag in running_map
+                    r_info = running_map.get(d.tag, {})
+                    vram_bytes = r_info.get("size_vram", 0)
+                    total_bytes = r_info.get("size", 0)
+                    effective_ctx = registry.get_num_ctx(d.tag, d.context_length)
+
+                    roster_models.append({
+                        "tag": d.tag,
+                        "digest": d.digest,
+                        "parameterSize": d.parameter_size,
+                        "quantization": d.quantization_level,
+                        "contextLength": effective_ctx,
+                        "discoveredMaxContext": d.context_length,
+                        "supportsVision": d.supports_vision,
+                        "supportsThinking": d.supports_thinking,
+                        "supportsTools": d.supports_tools,
+                        "isResident": is_res,
+                        "sizeVram": vram_bytes,
+                        "sizeTotal": total_bytes,
+                    })
+
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {
+                        "fulfilment": fulfilment,
+                        "models": roster_models,
+                    },
+                })
+            except Exception as err:
+                send_rpc_response({
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "error": {"code": -32000, "message": str(err)},
+                })
             return True
 
         if method == "shutdown":

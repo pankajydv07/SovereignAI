@@ -287,3 +287,69 @@ class SessionStore:
                         "updatedAtMs": row["updated_at_ms"],
                     })
                 return results
+
+    async def save_policy_rule(
+        self, project_id: str, tool: str, resource_pattern: str, choice: str
+    ) -> dict[str, Any]:
+        """Insert or update a project-level policy rule."""
+        now = current_time_ms()
+        async with self._get_connection() as conn:
+            await conn.execute(
+                """
+                INSERT INTO project_policies (
+                    project_id, tool, resource_pattern, policy_choice, created_at_ms
+                )
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(project_id, tool, resource_pattern) DO UPDATE SET
+                    policy_choice = excluded.policy_choice,
+                    created_at_ms = excluded.created_at_ms
+                """,
+                (project_id, tool, resource_pattern, choice, now),
+            )
+            await conn.commit()
+            return {
+                "projectId": project_id,
+                "tool": tool,
+                "resourcePattern": resource_pattern,
+                "choice": choice,
+                "createdAtMs": now,
+            }
+
+    async def revoke_policy_rule(
+        self, project_id: str, tool: str, resource_pattern: str
+    ) -> bool:
+        """Revoke a persisted project-level policy rule."""
+        async with self._get_connection() as conn:
+            cur = await conn.execute(
+                """
+                DELETE FROM project_policies
+                WHERE project_id = ? AND tool = ? AND resource_pattern = ?
+                """,
+                (project_id, tool, resource_pattern),
+            )
+            await conn.commit()
+            return cur.rowcount > 0
+
+    async def list_project_policies(self, project_id: str) -> list[dict[str, Any]]:
+        """List all persisted policy rules for a project."""
+        async with self._get_connection() as conn:
+            async with conn.execute(
+                """
+                SELECT project_id, tool, resource_pattern, policy_choice, created_at_ms
+                FROM project_policies
+                WHERE project_id = ?
+                ORDER BY created_at_ms DESC
+                """,
+                (project_id,),
+            ) as cur:
+                rows = await cur.fetchall()
+                return [
+                    {
+                        "projectId": r["project_id"],
+                        "tool": r["tool"],
+                        "resourcePattern": r["resource_pattern"],
+                        "choice": r["policy_choice"],
+                        "createdAtMs": r["created_at_ms"],
+                    }
+                    for r in rows
+                ]
