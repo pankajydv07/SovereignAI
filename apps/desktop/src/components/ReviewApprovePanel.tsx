@@ -72,8 +72,8 @@ export interface ReviewApprovePanelProps {
   initialStatus?: "DRAFT" | "PENDING_CHECK" | "APPROVED" | "REJECTED";
   initialStampText?: string;
   isConcurrent?: boolean;
-  onApproveSuccess?: (auditRecord: any) => void;
-  onRejectSuccess?: (auditRecord: any) => void;
+  onApproveSuccess?: (auditRecord: unknown) => void;
+  onRejectSuccess?: (auditRecord: unknown) => void;
 }
 
 export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
@@ -89,64 +89,10 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
     logoText: "MRPL / ONGC GROUP",
     terminology: "APPROVED",
   },
-  initialFields = [
-    {
-      id: "f1",
-      field_name: "t_actual",
-      value: "8.2",
-      unit: "mm",
-      confidence: 0.98,
-      is_verified: true,
-      requires_verification: false,
-      page: 1,
-      bbox: [120, 340, 160, 480],
-      imagePath: "inspection_report_c101.pdf",
-    },
-    {
-      id: "f2",
-      field_name: "design_pressure",
-      value: "2.4",
-      unit: "MPa",
-      confidence: 0.72,
-      is_verified: false,
-      requires_verification: true,
-      page: 1,
-      bbox: [210, 340, 250, 480],
-      imagePath: "inspection_report_c101.pdf",
-    },
-  ],
-  initialCitations = [
-    {
-      id: "c1",
-      doc_id: "KB-API-570",
-      title: "Piping Inspection Code",
-      clause_or_section: "Section 7.1.2 - Corrosion Rate and Remaining Life",
-      claim_text: "Calculations shall follow API 570 formula with minimum required thickness bounds.",
-      is_cited: true,
-    },
-    {
-      id: "c2",
-      doc_id: "KB-IS-2825",
-      title: "Class I Pressure Vessels Code",
-      clause_or_section: "Clause 3.4 - Uncited Wall Allowance",
-      claim_text: "Corrosion allowance shall not fall below 1.5mm without metallurgical review.",
-      is_cited: false, // Uncited claim!
-    },
-  ],
-  calcExecution = {
-    run_id: "calc-run-8921",
-    calc_type: "remaining_life_api570",
-    status: "VERIFIED",
-    executed_derivation: {
-      equipment_tag: "C-101 (Crude Distillation Column)",
-      governing_standard: "API 570 Section 7.1.2 (Piping Inspection Code)",
-      t_actual_mm: 8.2,
-      t_min_mm: 4.5,
-      corrosion_rate_mm_yr: 0.25,
-      remaining_life_years: 14.8,
-    },
-  },
-  modelsUsed = ["glm-ocr", "qwen3-coder:30b", "deepseek-r1:14b"],
+  initialFields = [],
+  initialCitations = [],
+  calcExecution,
+  modelsUsed = [],
   initialStatus = "PENDING_CHECK",
   initialStampText = "",
   isConcurrent = false,
@@ -163,12 +109,8 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
 
   // Edit & approve state
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editedNarrative, setEditedNarrative] = useState<string>(
-    "Based on executed calculations (calc-run-8921) adhering to API 570 Section 7.1.2, wall thickness of 8.2mm yields a remaining safe operational life of 14.8 years under current operating pressure."
-  );
-  const [originalNarrative] = useState<string>(
-    "Based on executed calculations (calc-run-8921) adhering to API 570 Section 7.1.2, wall thickness of 8.2mm yields a remaining safe operational life of 14.8 years under current operating pressure."
-  );
+  const [editedNarrative, setEditedNarrative] = useState<string>("");
+  const [originalNarrative] = useState<string>("");
 
   // Rejection modal state
   const [showRejectModal, setShowRejectModal] = useState<boolean>(false);
@@ -451,43 +393,42 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
               )}
             </div>
 
-            {/* Executed Derivation Table */}
-            <div className="mb-6 border border-[#D0D7DE] rounded overflow-hidden">
-              <div className="bg-[#EEF1F4] px-3 py-2 border-b border-[#D0D7DE] font-mono text-[11px] font-bold text-[#1F2328] flex justify-between">
-                <span>EXECUTED CALCULATION DERIVATION</span>
-                <span>RUN ID: {calcExecution.run_id}</span>
+            {/* Executed Derivation Table — only shown when a calc run is attached */}
+            {calcExecution && (
+              <div className="mb-6 border border-[#D0D7DE] rounded overflow-hidden">
+                <div className="bg-[#EEF1F4] px-3 py-2 border-b border-[#D0D7DE] font-mono text-[11px] font-bold text-[#1F2328] flex justify-between">
+                  <span>EXECUTED CALCULATION DERIVATION</span>
+                  <span>RUN ID: {calcExecution.run_id}</span>
+                </div>
+                <div className="p-3 text-[12px] font-mono space-y-1.5 bg-[#F6F8FA]">
+                  <div className="flex justify-between">
+                    <span className="text-[#57606A]">Equipment Tag:</span>
+                    <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.equipment_tag}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#57606A]">Governing Standard:</span>
+                    <span className="font-bold text-[#0B62D6]">{calcExecution.executed_derivation.governing_standard}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#57606A]">Actual Thickness (t_actual):</span>
+                    <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.t_actual_mm} mm</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#57606A]">Minimum Required (t_min):</span>
+                    <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.t_min_mm} mm</span>
+                  </div>
+                  <div className="flex justify-between border-t border-[#D0D7DE] pt-1 mt-1 font-bold text-[#10B981]">
+                    <span>Calculated Safe Remaining Life:</span>
+                    <span>{calcExecution.executed_derivation.remaining_life_years} YEARS</span>
+                  </div>
+                </div>
               </div>
-              <div className="p-3 text-[12px] font-mono space-y-1.5 bg-[#F6F8FA]">
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Equipment Tag:</span>
-                  <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.equipment_tag}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Governing Standard:</span>
-                  <span className="font-bold text-[#0B62D6]">{calcExecution.executed_derivation.governing_standard}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Actual Thickness (t_actual):</span>
-                  <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.t_actual_mm} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Minimum Required (t_min):</span>
-                  <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.t_min_mm} mm</span>
-                </div>
-                <div className="flex justify-between border-t border-[#D0D7DE] pt-1 mt-1 font-bold text-[#10B981]">
-                  <span>Calculated Safe Remaining Life:</span>
-                  <span>{calcExecution.executed_derivation.remaining_life_years} YEARS</span>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Bottom Stamp or Non-Removable Draft Attestation Banner */}
             {status === "APPROVED" || stampText ? (
-              <div
-                data-testid="approval-stamp-box"
-                className="p-4 bg-[#10B981]/10 border-2 border-[#10B981] rounded text-center font-mono text-[12px] font-bold text-[#10B981]"
-              >
-                <div className="text-[14px] uppercase mb-1">✔ {orgConfig.terminology}</div>
+              <div className="p-4 bg-[#10B981]/10 border-2 border-[#10B981] rounded text-center font-mono text-[12px] font-bold text-[#10B981]">
+                <div className="text-[14px] uppercase mb-1">{orgConfig.terminology}</div>
                 <div>{stampText || `APPROVED BY: ${checker.name} (${checker.designation}) · ${orgConfig.terminology}`}</div>
                 <div className="text-[10px] font-normal text-[#57606A] mt-1">
                   PREPARED BY: {maker.name} ({maker.designation}) · CHECKED BY: {checker.name} ({checker.designation})
@@ -628,16 +569,14 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
               <div className="p-3 bg-[#121821] border border-[#263241] rounded font-mono text-[11px] space-y-2 text-[#9AA7B4]">
                 <div className="flex justify-between">
                   <span>Models Used:</span>
-                  <span className="text-[#E6EDF3]">{modelsUsed.join(" · ")}</span>
+                  <span className="text-[#E6EDF3]">{modelsUsed.length > 0 ? modelsUsed.join(" · ") : "(none recorded)"}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Calc Run ID:</span>
-                  <span className="text-[#E6EDF3]">{calcExecution.run_id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Minimum Confidence:</span>
-                  <span className="text-[#10B981] font-bold">0.72</span>
-                </div>
+                {calcExecution && (
+                  <div className="flex justify-between">
+                    <span>Calc Run ID:</span>
+                    <span className="text-[#E6EDF3]">{calcExecution.run_id}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Identity Source:</span>
                   <span className="text-[#4C8DF6]">os_user_session (local)</span>

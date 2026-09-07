@@ -7,6 +7,12 @@ interface TopBarProps {
   onOpenSovereignty?: () => void;
   egressCount?: number;
   isAirGapped?: boolean;
+  currentUser?: {
+    id: string;
+    name: string;
+    designation: string;
+  };
+  gpuUsagePercent?: number | null;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -14,6 +20,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenSovereignty,
   egressCount = 0,
   isAirGapped = true,
+  currentUser,
+  gpuUsagePercent = null,
 }) => {
   const renderCoreStatusBadge = () => {
     if (!coreState) {
@@ -75,19 +83,28 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="h-4 w-px bg-border" />
 
         <div className="flex items-center gap-1.5 text-text-dim hover:text-text cursor-pointer">
-          <span>MRPL / Inspection & Maintenance</span>
+          <span>MRPL / Mangalore Refinery & Petrochemicals</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </div>
       </div>
 
       {/* Right section: User role & Sovereignty Egress Monitor */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 font-mono text-[11px] text-text-dim">
-          <span className="w-2 h-2 rounded-full bg-accent" />
-          <span>pankaj.s</span>
-          <span className="text-text-faint">·</span>
-          <span className="text-text-dim">DEPUTY MANAGER</span>
-        </div>
+        {currentUser ? (
+          <div className="flex items-center gap-2 font-mono text-[11px] text-text-dim">
+            <span className="w-2 h-2 rounded-full bg-accent" />
+            <span>{currentUser.name}</span>
+            <span className="text-text-faint">·</span>
+            <span className="text-text-dim uppercase">{currentUser.designation}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 font-mono text-[11px] text-text-dim">
+            <span className="w-2 h-2 rounded-full bg-sovereign" />
+            <span>LOCAL OPERATOR</span>
+            <span className="text-text-faint">·</span>
+            <span className="text-text-dim">ON-PREMISE SESSION</span>
+          </div>
+        )}
 
         <div className="h-4 w-px bg-border" />
 
@@ -99,7 +116,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         >
           <div className="flex items-center gap-1.5 text-sovereign font-medium">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>{isAirGapped ? "AIR-GAPPED" : "SAMPLED"}</span>
+            <span>{isAirGapped ? "AIR-GAPPED" : "CONNECTED"}</span>
           </div>
           <span className="text-text-faint">|</span>
           <div className="flex items-center gap-1 text-text-dim">
@@ -112,11 +129,15 @@ export const TopBar: React.FC<TopBarProps> = ({
               {egressCount}
             </span>
           </div>
-          <span className="text-text-faint">|</span>
-          <div className="flex items-center gap-1 text-text-dim">
-            <span>GPU</span>
-            <span className="text-text font-bold">0%</span>
-          </div>
+          {gpuUsagePercent !== null && (
+            <>
+              <span className="text-text-faint">|</span>
+              <div className="flex items-center gap-1 text-text-dim">
+                <span>GPU</span>
+                <span className="text-text font-bold">{gpuUsagePercent}%</span>
+              </div>
+            </>
+          )}
         </button>
       </div>
     </header>

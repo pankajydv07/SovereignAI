@@ -3,7 +3,6 @@ import { Shield, MessageSquare, FileCheck, Layers, ShieldCheck, Activity, Zap } 
 
 export type ConsoleTab =
   | "chat"
-  | "diagnostics"
   | "sovereignty"
   | "review"
   | "pid"

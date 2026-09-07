@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { CanvasOverlayField } from "./PageCanvas";
 
 export interface VerificationData {
@@ -39,7 +40,7 @@ export const FieldTable: React.FC<FieldTableProps> = ({
   onSelectField,
   onHoverField,
   onVerifyField,
-  operatorId = "A. Sharma",
+  operatorId,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -76,7 +77,7 @@ export const FieldTable: React.FC<FieldTableProps> = ({
           EXTRACTED FIELDS ({fields.length})
         </span>
         <span className="font-mono text-[11px] text-[#6B7A8A]">
-          OPERATOR: {operatorId}
+          OPERATOR: {operatorId || "LOCAL OPERATOR"}
         </span>
       </div>
 
@@ -159,12 +160,12 @@ export const FieldTable: React.FC<FieldTableProps> = ({
                   {/* Status & Verification Metadata */}
                   <td className="py-2.5 px-3 text-[11px]">
                     {field.is_verified && field.verification ? (
-                      <div className="text-[#10B981] font-mono">
-                        ✓ verified by {field.verification.verifiedBy} {field.verification.verifiedAt}
+                      <div className="text-[#10B981] font-mono flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> verified by {field.verification.verifiedBy} {field.verification.verifiedAt}
                       </div>
                     ) : field.requires_verification ? (
                       <div className="text-[#F59E0B] font-mono flex items-center gap-1">
-                        <span>⚠ Needs Review</span>
+                        <AlertTriangle className="w-3 h-3" /><span>Needs Review</span>
                       </div>
                     ) : (
                       <div className="text-[#9AA7B4] font-mono">Extracted</div>

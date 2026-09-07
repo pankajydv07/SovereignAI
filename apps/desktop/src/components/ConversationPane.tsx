@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Square, Bot, User, Sparkles } from "lucide-react";
+import { Send, Square, Bot, User, Brain } from "lucide-react";
 import { RoutingBadge } from "./RoutingBadge";
 
 export interface ChatMessage {
@@ -25,8 +25,21 @@ const ROLE_TINT_BORDERS: Record<string, string> = {
   writer: "border-l-[#8B5CF6]",
 };
 
-export const ConversationPane: React.FC = () => {
+export interface ConversationPaneProps {
+  sessionId?: string;
+  projectPath?: string;
+}
+
+export const ConversationPane: React.FC<ConversationPaneProps> = ({
+  sessionId,
+  projectPath,
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Clear messages when the active session changes
+  useEffect(() => {
+    setMessages([]);
+  }, [sessionId]);
   const [inputText, setInputText] = useState("");
   const [selectedRole, setSelectedRole] = useState("writer");
   const [activeStreamId, setActiveStreamId] = useState<number | null>(null);
@@ -173,7 +186,7 @@ export const ConversationPane: React.FC = () => {
       if (unlistenInterrupt) unlistenInterrupt();
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
     };
-  }, []);
+  }, [sessionId]);
 
   const handleSend = async () => {
     if (!inputText.trim() || activeStreamId !== null) return;
@@ -191,17 +204,16 @@ export const ConversationPane: React.FC = () => {
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
     if (!isTauri) {
-      // Demo streaming fallback for browser dev
-      const assistantId = `assistant-${Date.now()}`;
-      const assistantMsg: ChatMessage = {
-        id: assistantId,
+      const errorMsg: ChatMessage = {
+        id: `err-${Date.now()}`,
         sender: "assistant",
         role: currentRole,
-        model: "resolving...",
-        content: "Browser mock mode: stdio RPC requires Tauri runtime.",
+        model: "offline",
+        content: "Error: Local execution requires Tauri runtime connected to on-premise Ollama (127.0.0.1:11434).",
         isStreaming: false,
+        interrupted: true,
       };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
       return;
     }
 
@@ -213,6 +225,8 @@ export const ConversationPane: React.FC = () => {
       }));
 
       const streamId = await invoke<number>("send_chat_message", {
+        sessionId: sessionId || null,
+        projectPath: projectPath || null,
         role: currentRole,
         messages: apiMessages,
       });
@@ -326,7 +340,7 @@ export const ConversationPane: React.FC = () => {
                 {msg.thinking && msg.thinking.trim().length > 0 && (
                   <details className="group border border-border/50 rounded bg-surface/50 p-2">
                     <summary className="cursor-pointer text-text-faint hover:text-text-dim text-[11px] select-none font-mono flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-text-faint" />
+                      <Brain className="w-3 h-3 text-text-faint" />
                       <span>Thinking Process</span>
                     </summary>
                     <div className="mt-2 font-mono text-[11px] text-text-faint whitespace-pre-wrap leading-relaxed border-t border-border/40 pt-2">

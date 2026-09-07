@@ -93,7 +93,7 @@ const SingleTerminal: React.FC<SingleTerminalProps> = ({ tab, isActive, onExit }
           term.writeln(`\r\n\x1b[31mFailed to spawn PTY: ${err}\x1b[0m\r\n`);
         }
       } else {
-        term.writeln("\r\n\x1b[33m[SWARAJ Demo Mode] PTY stream initialized. (Web fallback)\x1b[0m\r\n$ ");
+        term.writeln("\r\n\x1b[31m[SWARAJ] Terminal requires native Tauri PTY process. No native runtime available.\x1b[0m\r\n");
       }
     };
 

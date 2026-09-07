@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 export interface TraceStepItem {
   stepIndex: number;
@@ -123,7 +124,7 @@ export const RunTrace: React.FC<RunTraceProps> = ({
                   {step.elapsedMs && (
                     <span className="text-[#A0AEC0]">{step.elapsedMs}ms</span>
                   )}
-                  <span className="text-[#A0AEC0]">{isExpanded ? "▲" : "▼"}</span>
+                  <span className="text-[#A0AEC0]">{isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}</span>
                 </div>
               </div>
 

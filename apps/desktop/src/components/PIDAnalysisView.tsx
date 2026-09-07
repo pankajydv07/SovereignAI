@@ -33,85 +33,33 @@ export interface PIDAnalysisViewProps {
 }
 
 export const PIDAnalysisView: React.FC<PIDAnalysisViewProps> = ({
-  imagePath = "c101_crude_distillation_pid_rev4.pdf",
-  evalMeta = "RF-DETR Small · Roboflow P&ID dataset",
-  symbolInventory = {
-    instrument_tag: 4,
-    instrument_dcs: 1,
-    gate_valve: 8,
-    control_valve: 3,
-    check_valve: 2,
-    pump: 2,
-    vessel: 1,
-    heat_exchanger: 2,
-    ball_valve: 4,
-    flange: 12,
-    reducer: 6,
-  },
-  tags = [
-    {
-      id: "tag-1",
-      rawTag: "PT-101",
-      normalizedTag: "PT-101",
-      className: "instrument_tag",
-      confidence: 0.98,
-      isUnreadable: false,
-      status: "MATCHED",
-      registerMatchName: "Column Top Pressure Transmitter",
-      bbox: [0.05, 0.08, 0.09, 0.14],
-    },
-    {
-      id: "tag-2",
-      rawTag: "TI 202",
-      normalizedTag: "TI-202",
-      className: "instrument_tag",
-      confidence: 0.91,
-      isUnreadable: false,
-      status: "MATCHED",
-      registerMatchName: "Reflux Temperature Indicator",
-      bbox: [0.15, 0.20, 0.19, 0.26],
-    },
-    {
-      id: "tag-3",
-      rawTag: "FIC-204A",
-      normalizedTag: "FIC-204A",
-      className: "instrument_dcs",
-      confidence: 0.95,
-      isUnreadable: false,
-      status: "MATCHED",
-      registerMatchName: "Crude Feed Flow Indicator Controller",
-      bbox: [0.30, 0.15, 0.35, 0.22],
-    },
-    {
-      id: "tag-4",
-      rawTag: "PI-108",
-      normalizedTag: "PI-108",
-      className: "instrument_tag",
-      confidence: 0.85,
-      isUnreadable: false,
-      status: "DISCREPANCY",
-      registerMatchName: undefined, // Missing in equipment register!
-      bbox: [0.55, 0.40, 0.60, 0.48],
-    },
-    {
-      id: "tag-5",
-      rawTag: "unreadable",
-      normalizedTag: "[UNREADABLE REGION]",
-      className: "instrument_tag",
-      confidence: null, // null for unreadable per spec!
-      isUnreadable: true,
-      status: "UNREADABLE",
-      registerMatchName: undefined,
-      bbox: [0.72, 0.65, 0.77, 0.72],
-    },
-  ],
+  imagePath,
+  evalMeta,
+  symbolInventory,
+  tags,
 }) => {
   const [showOverlay, setShowOverlay] = useState<boolean>(true);
-  const [selectedTagId, setSelectedTagId] = useState<string | null>("tag-4");
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
 
-  const totalSymbols = Object.values(symbolInventory).reduce((a, b) => a + b, 0);
-  const discrepancyCount = tags.filter((t) => t.status === "DISCREPANCY").length;
-  const unreadableCount = tags.filter((t) => t.isUnreadable).length;
+  const safeTags = tags ?? [];
+  const safeInventory = symbolInventory ?? {};
+  const totalSymbols = Object.values(safeInventory).reduce((a, b) => a + b, 0);
+  const discrepancyCount = safeTags.filter((t) => t.status === "DISCREPANCY").length;
+  const unreadableCount = safeTags.filter((t) => t.isUnreadable).length;
+
+  if (!imagePath) {
+    return (
+      <div
+        data-testid="pid-analysis-view"
+        className="flex-1 flex flex-col items-center justify-center bg-[#0B0F14] text-[#9AA7B4] font-mono text-xs space-y-2 p-8"
+      >
+        <span>No P&amp;ID document loaded for analysis.</span>
+        <span className="text-[#6B7A8A]">
+          P&amp;ID analysis starts when a drawing file is ingested into the active session.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -153,17 +101,15 @@ export const PIDAnalysisView: React.FC<PIDAnalysisViewProps> = ({
             data-testid="pid-drawing-canvas"
             className="relative w-full h-full bg-[#121821] border border-[#263241] rounded-[4px] flex items-center justify-center overflow-hidden"
           >
-            {/* Simulated P&ID Blueprint Background */}
-            <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#263241_1px,transparent_1px)] [background-size:16px_16px]" />
             <div className="text-[14px] font-mono text-[#9AA7B4] select-none text-center">
-              [P&ID BLUEPRINT DRAWING CANVAS: {imagePath}]
+              [{imagePath}]
               <br />
               <span className="text-[11px] text-[#6B7A8A]">A0 Format · 7000×5000 px · Tiled 1024×1024 (20% overlap)</span>
             </div>
 
             {/* Bounding Box Annotations Overlay */}
             {showOverlay &&
-              tags.map((t) => {
+              safeTags.map((t) => {
                 const [x0, y0, x1, y1] = t.bbox;
                 const left = `${x0 * 100}%`;
                 const top = `${y0 * 100}%`;
@@ -231,7 +177,7 @@ export const PIDAnalysisView: React.FC<PIDAnalysisViewProps> = ({
             <div>
               <div className="font-mono text-[12px] font-bold text-[#E6EDF3] mb-2 uppercase flex justify-between">
                 <span>1. Symbol Inventory ({totalSymbols} detected)</span>
-                <span className="text-[#9AA7B4] text-[11px] font-normal">11 Roboflow Classes</span>
+                <span className="text-[#9AA7B4] text-[11px] font-normal">Roboflow Classes</span>
               </div>
 
               <div className="bg-[#121821] border border-[#263241] rounded overflow-hidden">
@@ -243,7 +189,7 @@ export const PIDAnalysisView: React.FC<PIDAnalysisViewProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#263241]">
-                    {Object.entries(symbolInventory).map(([cls, cnt]) => (
+                    {Object.entries(safeInventory).map(([cls, cnt]) => (
                       <tr key={cls} className="hover:bg-[#1A222E]/50">
                         <td className="p-2 text-[#E6EDF3]">{cls}</td>
                         <td className="p-2 text-right font-bold text-[#4C8DF6]">{cnt}</td>
@@ -264,7 +210,7 @@ export const PIDAnalysisView: React.FC<PIDAnalysisViewProps> = ({
               </div>
 
               <div className="space-y-2">
-                {tags.map((tag) => (
+                {safeTags.map((tag) => (
                   <div
                     key={tag.id}
                     onClick={() => setSelectedTagId(tag.id)}

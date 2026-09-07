@@ -7,21 +7,22 @@ import { SovereigntyScreen, SovereigntyStatus } from "./components/SovereigntySc
 import { ProjectLauncher } from "./components/ProjectLauncher";
 import { SessionList } from "./components/SessionList";
 import { FileTree } from "./components/FileTree";
-import { ReviewApprovePanel } from "./components/ReviewApprovePanel";
 import { PIDAnalysisView } from "./components/PIDAnalysisView";
 import { AuditChainPanel } from "./components/AuditChainPanel";
 import { AttestationMetricsPanel } from "./components/AttestationMetricsPanel";
 import { ConsoleSubHeader } from "./components/ConsoleSubHeader";
-import { CoreState, ProjectInfo } from "./protocol";
+import { ModelRoster, ModelRosterItem } from "./components/ModelRoster";
+import { CoreState, ProjectInfo, SessionInfo } from "./protocol";
 import { initialProjectState, projectReducer } from "./reducers/projectReducer";
 import { initialSessionState, sessionReducer } from "./reducers/sessionReducer";
 
 export const App: React.FC = () => {
   const [coreState, setCoreState] = useState<CoreState>({ type: "connecting" });
-  const [activeTab, setActiveTab] = useState<"chat" | "diagnostics" | "sovereignty" | "review" | "pid" | "audit" | "attestation">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "sovereignty" | "review" | "pid" | "audit" | "attestation">("chat");
   const [leftRailTab, setLeftRailTab] = useState<LeftRailTab>("launcher");
   const [egressCount, setEgressCount] = useState<number>(0);
   const [isAirGapped, setIsAirGapped] = useState<boolean>(true);
+  const [installedModels, _setInstalledModels] = useState<ModelRosterItem[]>([]);
 
   const [projState, dispatchProj] = useReducer(projectReducer, initialProjectState);
   const [sessState, dispatchSess] = useReducer(sessionReducer, initialSessionState);
@@ -33,32 +34,12 @@ export const App: React.FC = () => {
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
     if (!isTauri) {
-      setCoreState({ type: "ready", version: "0.1.0", protocol_version: "2026-03-01" });
-      dispatchProj({
-        type: "SET_PROJECTS",
-        payload: [
-          {
-            id: "proj-demo-1",
-            name: "IOCL Gujarat Refinery Inspection",
-            path: "d:/SovereignAI",
-            createdAtMs: Date.now() - 86400000,
-            updatedAtMs: Date.now(),
-            exists: true,
-          },
-        ],
-      });
+      setCoreState({ type: "error", message: "Not running in Tauri. Browser mode is not supported for SWARAJ." });
+      dispatchProj({ type: "SET_ERROR", message: "No backend available", remedyLabel: "Run in Tauri" });
       dispatchSess({
-        type: "SET_SESSIONS",
-        payload: [
-          {
-            sessionId: "sess-demo-01",
-            projectId: "proj-demo-1",
-            title: "Crude Distillation Column Review",
-            status: "active",
-            createdAtMs: Date.now() - 3600000,
-            updatedAtMs: Date.now(),
-          },
-        ],
+        type: "SET_DEGRADED",
+        message: "No backend available",
+        remedyLabel: "Run in Tauri",
       });
       return;
     }
@@ -118,7 +99,7 @@ export const App: React.FC = () => {
     dispatchSess({ type: "SET_LOADING", stage: "fetching session list...", elapsedMs: 50 });
     try {
       const { invoke } = await import("@tauri-apps/api/core");
-      const res = await invoke<any>("invoke_core_rpc", {
+      const res = await invoke<{ sessions: SessionInfo[] }>("invoke_core_rpc", {
         method: "session/list",
         params: { projectId: project.id, projectPath: project.path },
       });
@@ -148,15 +129,11 @@ export const App: React.FC = () => {
         if (!selected) return;
         path = selected;
       } catch (err) {
-        console.error("Failed to open native folder picker:", err);
-        const fallback = window.prompt("Enter absolute project folder path:");
-        if (!fallback || !fallback.trim()) return;
-        path = fallback.trim();
+        dispatchProj({ type: "SET_ERROR", message: "Failed to open folder picker", remedyLabel: "Dismiss" });
+        return;
       }
     } else {
-      const selected = window.prompt("Enter absolute project folder path:");
-      if (!selected || !selected.trim()) return;
-      path = selected.trim();
+      return;
     }
 
     if (!path) return;
@@ -205,7 +182,7 @@ export const App: React.FC = () => {
 
     try {
       const { invoke } = await import("@tauri-apps/api/core");
-      const newSess = await invoke<any>("invoke_core_rpc", {
+      const newSess = await invoke<SessionInfo>("invoke_core_rpc", {
         method: "session/new",
         params: { projectId: activeProject.id, projectPath: activeProject.path },
       });
@@ -227,7 +204,7 @@ export const App: React.FC = () => {
 
     try {
       const { invoke } = await import("@tauri-apps/api/core");
-      const res = await invoke<any>("invoke_core_rpc", {
+      const res = await invoke<{ session: SessionInfo; events: any[] }>("invoke_core_rpc", {
         method: "session/load",
         params: { sessionId, projectPath: activeProject.path },
       });
@@ -294,7 +271,13 @@ export const App: React.FC = () => {
         )}
 
         {leftRailTab === "files" && (
-          <FileTree workspaceRoot={activeProject ? activeProject.path : "d:/SovereignAI"} />
+          <FileTree workspaceRoot={activeProject ? activeProject.path : ""} />
+        )}
+
+        {leftRailTab === "models" && (
+          <div className="w-80 bg-surface border-r border-border p-3 overflow-y-auto">
+            <ModelRoster models={installedModels} />
+          </div>
         )}
 
         {/* Content Viewport */}
@@ -319,6 +302,10 @@ export const App: React.FC = () => {
               }}
               isAirGapped={isAirGapped}
             />
+          ) : leftRailTab === "terminal" ? (
+            <div className="flex-1 flex flex-col overflow-hidden p-2">
+              <TerminalPane />
+            </div>
           ) : (
             <>
               <ConsoleSubHeader
@@ -330,7 +317,10 @@ export const App: React.FC = () => {
               {activeTab === "chat" && (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <div className="flex-1 overflow-hidden flex flex-col">
-                    <ConversationPane />
+                    <ConversationPane
+                      sessionId={sessState.activeSessionId || undefined}
+                      projectPath={activeProject?.path}
+                    />
                   </div>
                   <TerminalPane />
                 </div>
@@ -339,14 +329,12 @@ export const App: React.FC = () => {
               {activeTab === "sovereignty" && <SovereigntyScreen />}
 
               {activeTab === "review" && (
-                <ReviewApprovePanel
-                  deliverableId="DELIV-2026-09-C101"
-                  title="TECHNICAL APPROVAL NOTE: Remaining Life & Inspection Sanction"
-                  subject="Crude Distillation Column C-101 Remaining Life & Inspection Sanction"
-                  maker={{ id: "user_sharma", name: "A. Sharma", designation: "Senior Inspection Engineer" }}
-                  checker={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
-                  currentUser={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
-                />
+                <div className="flex-1 flex flex-col items-center justify-center bg-bg text-text-dim font-mono text-xs p-8 space-y-2">
+                  <span className="text-text-dim">No deliverable loaded for review.</span>
+                  <span className="text-text-faint">
+                    The Review &amp; Approve panel opens when the agent produces a document deliverable in the active session.
+                  </span>
+                </div>
               )}
 
               {activeTab === "pid" && <PIDAnalysisView />}

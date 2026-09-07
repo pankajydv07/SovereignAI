@@ -187,28 +187,28 @@ export const ProjectLauncher: React.FC<ProjectLauncherProps> = ({
           )}
         </div>
 
-        {/* Model & System Roster (Span 1) */}
+        {/* Role Capability Roster (Span 1) */}
         <div className="col-span-1 space-y-3">
           <h2 className="text-xs font-semibold text-text-dim uppercase tracking-wider font-mono">
-            Model Roster Status
+            Role Capability Mapping
           </h2>
 
           <div className="p-4 bg-surface border border-border rounded-sm space-y-3 font-mono text-xs">
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-text-dim">Planner:</span>
-              <span className="text-accent font-semibold">deepseek-r1:14b</span>
+              <span className="text-text-dim">reasoning_audit:</span>
+              <span className="text-sovereign font-semibold">Ready (Local)</span>
             </div>
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-text-dim">Coder:</span>
-              <span className="text-accent font-semibold">qwen3-coder:30b</span>
+              <span className="text-text-dim">code_generation:</span>
+              <span className="text-sovereign font-semibold">Ready (Local)</span>
             </div>
             <div className="flex items-center justify-between border-b border-border/60 pb-2">
-              <span className="text-text-dim">Writer:</span>
-              <span className="text-accent font-semibold">llama3:8b</span>
+              <span className="text-text-dim">document_synthesis:</span>
+              <span className="text-sovereign font-semibold">Ready (Local)</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-text-dim">Vision:</span>
-              <span className="text-accent font-semibold">llava:13b</span>
+              <span className="text-text-dim">vision_ocr:</span>
+              <span className="text-sovereign font-semibold">Ready (Local)</span>
             </div>
           </div>
         </div>

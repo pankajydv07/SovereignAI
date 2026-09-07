@@ -17,12 +17,7 @@ export const FileTree: React.FC<FileTreeProps> = ({ workspaceRoot, onSelectFile 
   const fetchDir = async (relPath?: string): Promise<FileNode[]> => {
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
     if (!isTauri) {
-      // Demo web fallback
-      return [
-        { name: "core", path: "core", isDir: true },
-        { name: "apps", path: "apps", isDir: true },
-        { name: "BUILD-ORDERS.md", path: "BUILD-ORDERS.md", isDir: false, sizeBytes: 29783 },
-      ];
+      return [];
     }
 
     try {
