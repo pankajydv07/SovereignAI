@@ -38,6 +38,33 @@
         "projectId": { "type": "string" }
       }
     },
+    "ChatRoutingParams": {
+      "type": "object",
+      "required": ["sessionId", "projectId", "prompt", "taskClass", "modelTag", "confidence"],
+      "properties": {
+        "sessionId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "prompt": { "type": "string" },
+        "taskClass": { "type": "string" },
+        "modelTag": { "type": "string" },
+        "confidence": { "type": "number" },
+        "reasoning": { "type": "string" }
+      }
+    },
+    "PlanRunParams": {
+      "type": "object",
+      "required": ["sessionId", "projectId", "steps"],
+      "properties": {
+        "sessionId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "projectPath": { "type": "string" },
+        "dbPath": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PlanStep" }
+        }
+      }
+    },
     "PlanStep": {
       "type": "object",
       "required": ["stepIndex", "description"],
@@ -46,7 +73,12 @@
         "description": { "type": "string" },
         "tool": { "type": "string" },
         "sideEffect": { "type": "string" },
-        "requiresApproval": { "type": "boolean" }
+        "requiresApproval": { "type": "boolean" },
+        "idempotent": { "type": "boolean" },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "integer" }
+        }
       }
     },
     "ToolCallUpdatePayload": {

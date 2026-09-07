@@ -39,12 +39,21 @@ class PolicyEngine:
         project_id: str,
     ) -> tuple[PolicyDecision, str | None]:
         """Decide AUTO, ASK, or DENY for a tool call on a resource within a project."""
+        # TODO(M5): When user identity and RBAC clearance lands in M5, validate `subject`
+        # clearance levels against document classification. For unauthenticated / None subject,
+        # fallback is strictly conservative (never permissive).
+        if subject is not None and subject.strip() == "":
+            subject = None
+
         # Read side-effects are AUTO by default
         if side_effect == SideEffect.READ:
             return PolicyDecision.AUTO, None
 
         # Normalize resource string
         res_norm = resource.strip().replace("\\", "/")
+        if not res_norm or res_norm == "<unscoped>":
+            # Conservative fallback: unscoped resources cannot match generic path patterns
+            return PolicyDecision.ASK, None
 
         # 1. Check volatile session rules
         for (p_id, t_name, pattern), _choice in self._session_rules.items():
@@ -75,12 +84,14 @@ class PolicyEngine:
         """Match resource against pattern using glob or command prefix normalization."""
         pat_norm = pattern.strip().replace("\\", "/")
 
-        if tool.startswith("exec") or tool == "bash":
+        if tool.startswith("exec") or tool in ("bash", "code_exec", "calc_exec"):
             # Command prefix matching: 'git status *' matches 'git status' or 'git status -s'
             prefix = pat_norm.rstrip("*").strip()
             return resource == prefix or resource.startswith(prefix + " ")
         else:
-            # File path glob matching: 'docs/**' or 'notes.md'
+            # File path glob matching: 'docs/**' or 'notes.md' or '**'
+            if pat_norm in ("*", "**"):
+                return True
             return fnmatch.fnmatch(resource, pat_norm) or fnmatch.fnmatch(
                 resource, "*/" + pat_norm
             )

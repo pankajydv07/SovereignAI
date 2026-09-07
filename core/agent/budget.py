@@ -20,7 +20,7 @@ class RunBudget:
     """Configured limits for an agent run per PRD FR-3.6."""
 
     max_steps: int = 25
-    max_run_tokens: int = 128000
+    max_run_tokens: int = 228000
     per_call_num_ctx: int = 8192
     wall_clock_timeout_s: float = 300.0
 

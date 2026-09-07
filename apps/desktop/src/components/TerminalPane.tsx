@@ -3,7 +3,7 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import "@xterm/xterm/css/xterm.css";
-import { Terminal as TerminalIcon, Plus, X, Maximize2, Minimize2 } from "lucide-react";
+import { Terminal as TerminalIcon, Plus, X, Maximize2, Minimize2, ChevronDown, ChevronUp } from "lucide-react";
 
 interface TerminalTab {
   id: string;
@@ -220,6 +220,7 @@ export const TerminalPane: React.FC = () => {
     { id: "term-1", name: "Terminal 1" },
   ]);
   const [activeTabId, setActiveTabId] = useState<string>("term-1");
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const nextTabNum = useRef<number>(2);
 
@@ -228,6 +229,7 @@ export const TerminalPane: React.FC = () => {
     const name = `Terminal ${nextTabNum.current++}`;
     setTabs((prev) => [...prev, { id, name }]);
     setActiveTabId(id);
+    setIsMinimized(false);
   };
 
   const handleCloseTab = (id: string, e?: React.MouseEvent) => {
@@ -257,7 +259,7 @@ export const TerminalPane: React.FC = () => {
   return (
     <div
       className={`flex flex-col bg-bg border-t border-border transition-all duration-150 ${
-        isExpanded ? "h-96" : "h-64"
+        isMinimized ? "h-[30px]" : isExpanded ? "h-96" : "h-64"
       }`}
     >
       {/* 30px Tab Bar */}
@@ -273,7 +275,10 @@ export const TerminalPane: React.FC = () => {
             return (
               <div
                 key={tab.id}
-                onClick={() => setActiveTabId(tab.id)}
+                onClick={() => {
+                  setActiveTabId(tab.id);
+                  if (isMinimized) setIsMinimized(false);
+                }}
                 className={`h-6 px-2.5 rounded-t flex items-center gap-2 cursor-pointer transition-colors border-t border-x text-[11px] ${
                   isActive
                     ? "bg-[#0B0F14] text-text border-border font-semibold"
@@ -307,23 +312,36 @@ export const TerminalPane: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={() => setIsMinimized(!isMinimized)}
             className="p-1 text-text-dim hover:text-text rounded transition-colors cursor-pointer"
-            title={isExpanded ? "Collapse Terminal" : "Expand Terminal"}
+            title={isMinimized ? "Restore Terminal" : "Minimize Terminal"}
           >
-            {isExpanded ? (
-              <Minimize2 className="w-3.5 h-3.5" />
+            {isMinimized ? (
+              <ChevronUp className="w-3.5 h-3.5" />
             ) : (
-              <Maximize2 className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3.5 h-3.5" />
             )}
           </button>
+          {!isMinimized && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1 text-text-dim hover:text-text rounded transition-colors cursor-pointer"
+              title={isExpanded ? "Collapse Size" : "Maximize Size"}
+            >
+              {isExpanded ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Terminal Viewport - All containers kept mounted to preserve state & scrollback */}
-      <div className="flex-1 relative overflow-hidden bg-[#0B0F14]">
+      <div className={`flex-1 relative overflow-hidden bg-[#0B0F14] ${isMinimized ? "hidden" : "block"}`}>
         {tabs.map((tab) => (
           <SingleTerminal
             key={tab.id}

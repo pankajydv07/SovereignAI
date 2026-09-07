@@ -132,6 +132,10 @@ pub struct PermissionRequestParams {
     pub tool: String,
     pub side_effect: String,
     pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_pattern: Option<String>,
     pub options: Vec<PermissionOption>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff: Option<DiffContent>,
@@ -142,6 +146,8 @@ pub struct PermissionRequestParams {
 pub struct PermissionResponseParams {
     pub request_id: String,
     pub selected_option: PermissionOption,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_pattern: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -309,4 +315,31 @@ pub struct SandboxExecResult {
     pub duration_ms: u64,
     pub timed_out: bool,
     pub output_artifacts: Vec<String>,
+}
+
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatRoutingParams {
+    pub session_id: String,
+    pub project_id: String,
+    pub prompt: String,
+    pub task_class: String,
+    pub model_tag: String,
+    pub confidence: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanRunParams {
+    pub session_id: String,
+    pub project_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub db_path: Option<String>,
+    pub steps: Vec<PlanStep>,
 }

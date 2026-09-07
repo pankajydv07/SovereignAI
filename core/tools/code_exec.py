@@ -1,10 +1,10 @@
-"""Code Execution Tool — Runs Python code in network-isolated sandbox."""
-
 import os
 from pathlib import Path
+import sys
 import tempfile
 import time
 import uuid
+
 from typing import Any
 
 from pydantic import Field
@@ -75,9 +75,10 @@ class CodeExecTool(BaseTool[CodeExecInput, CodeExecOutput]):
                 # Combine implementation code and test code cleanly
                 full_test_content = f"{args.code}\n\n# --- Pytest Suite ---\n{args.test_code}\n"
                 test_file.write_text(full_test_content, encoding="utf-8")
-                command = ["python", "-m", "pytest", str(test_file), "-v"]
+                command = [sys.executable, "-m", "pytest", str(test_file), "-v"]
             else:
-                command = ["python", str(code_file)]
+                command = [sys.executable, str(code_file)]
+
 
             env_vars = prepare_sandbox_env(work_dir)
 

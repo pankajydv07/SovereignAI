@@ -299,7 +299,7 @@ export const App: React.FC = () => {
 
         {/* Content Viewport */}
         <main className="flex-1 flex flex-col bg-bg overflow-hidden">
-          {leftRailTab === "launcher" ? (
+          <div className={leftRailTab === "launcher" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
             <ProjectLauncher
               projects={projState.projects}
               activeProjectId={projState.activeProjectId}
@@ -319,43 +319,52 @@ export const App: React.FC = () => {
               }}
               isAirGapped={isAirGapped}
             />
-          ) : (
-            <>
-              <ConsoleSubHeader
-                activeTab={activeTab}
-                onSelectTab={setActiveTab}
-                onKillCore={handleKillCore}
-              />
+          </div>
 
-              {activeTab === "chat" && (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="flex-1 overflow-hidden flex flex-col">
-                    <ConversationPane />
-                  </div>
-                  <TerminalPane />
-                </div>
-              )}
+          <div className={leftRailTab !== "launcher" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+            <ConsoleSubHeader
+              activeTab={activeTab}
+              onSelectTab={setActiveTab}
+              onKillCore={handleKillCore}
+            />
 
-              {activeTab === "sovereignty" && <SovereigntyScreen />}
-
-              {activeTab === "review" && (
-                <ReviewApprovePanel
-                  deliverableId="DELIV-2026-09-C101"
-                  title="TECHNICAL APPROVAL NOTE: Remaining Life & Inspection Sanction"
-                  subject="Crude Distillation Column C-101 Remaining Life & Inspection Sanction"
-                  maker={{ id: "user_sharma", name: "A. Sharma", designation: "Senior Inspection Engineer" }}
-                  checker={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
-                  currentUser={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
+            <div className={activeTab === "chat" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <ConversationPane
+                  activeProject={activeProject}
+                  activeSessionId={sessState.activeSessionId}
                 />
-              )}
+              </div>
+              <TerminalPane />
+            </div>
 
-              {activeTab === "pid" && <PIDAnalysisView />}
+            <div className={activeTab === "sovereignty" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+              <SovereigntyScreen />
+            </div>
 
-              {activeTab === "audit" && <AuditChainPanel />}
+            <div className={activeTab === "review" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+              <ReviewApprovePanel
+                deliverableId="DELIV-2026-09-C101"
+                title="TECHNICAL APPROVAL NOTE: Remaining Life & Inspection Sanction"
+                subject="Crude Distillation Column C-101 Remaining Life & Inspection Sanction"
+                maker={{ id: "user_sharma", name: "A. Sharma", designation: "Senior Inspection Engineer" }}
+                checker={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
+                currentUser={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
+              />
+            </div>
 
-              {activeTab === "attestation" && <AttestationMetricsPanel />}
-            </>
-          )}
+            <div className={activeTab === "pid" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+              <PIDAnalysisView />
+            </div>
+
+            <div className={activeTab === "audit" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+              <AuditChainPanel />
+            </div>
+
+            <div className={activeTab === "attestation" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
+              <AttestationMetricsPanel />
+            </div>
+          </div>
         </main>
       </div>
     </div>

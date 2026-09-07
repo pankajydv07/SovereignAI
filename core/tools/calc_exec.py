@@ -94,3 +94,6 @@ class ExecuteCalculationTool(BaseTool[ExecuteCalculationInput, ExecuteCalculatio
             return ToolResult.failed(f"CalculationVerificationError: {exc}")
         except Exception as exc:
             return ToolResult.failed(f"Calculation failed: {exc}")
+
+
+CalcExecTool = ExecuteCalculationTool

@@ -106,6 +106,8 @@ export const PermissionRequestParamsSchema = z.object({
   tool: z.string(),
   sideEffect: z.string(),
   description: z.string(),
+  resource: z.string().optional(),
+  resourcePattern: z.string().optional(),
   options: z.array(PermissionOptionSchema),
   diff: DiffContentSchema.optional(),
 });
@@ -114,6 +116,7 @@ export type PermissionRequestParams = z.infer<typeof PermissionRequestParamsSche
 export const PermissionResponseParamsSchema = z.object({
   requestId: z.string(),
   selectedOption: PermissionOptionSchema,
+  resourcePattern: z.string().optional(),
 });
 export type PermissionResponseParams = z.infer<typeof PermissionResponseParamsSchema>;
 
@@ -265,3 +268,23 @@ export const SandboxExecResultSchema = z.object({
   outputArtifacts: z.array(z.string()),
 });
 export type SandboxExecResult = z.infer<typeof SandboxExecResultSchema>;
+
+export const ChatRoutingParamsSchema = z.object({
+  sessionId: z.string(),
+  projectId: z.string(),
+  prompt: z.string(),
+  taskClass: z.string(),
+  modelTag: z.string(),
+  confidence: z.number(),
+  reasoning: z.string().optional(),
+});
+export type ChatRoutingParams = z.infer<typeof ChatRoutingParamsSchema>;
+
+export const PlanRunParamsSchema = z.object({
+  sessionId: z.string(),
+  projectId: z.string(),
+  projectPath: z.string().optional(),
+  dbPath: z.string().optional(),
+  steps: z.array(PlanStepSchema),
+});
+export type PlanRunParams = z.infer<typeof PlanRunParamsSchema>;

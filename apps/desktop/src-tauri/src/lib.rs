@@ -76,12 +76,40 @@ async fn get_core_stderr_tail(state: State<'_, AppState>) -> Result<Vec<String>,
 #[tauri::command]
 async fn send_chat_message(
     state: State<'_, AppState>,
-    role: String,
-    messages: serde_json::Value,
+    params: serde_json::Value,
 ) -> Result<u64, String> {
     state
         .supervisor
-        .send_chat_stream(role, messages)
+        .send_chat_stream(params)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn respond_permission(
+    state: State<'_, AppState>,
+    request_id: String,
+    selected_option: String,
+    resource_pattern: Option<String>,
+) -> Result<(), String> {
+    state
+        .supervisor
+        .respond_permission(request_id, selected_option, resource_pattern)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn run_plan(
+    state: State<'_, AppState>,
+    session_id: String,
+    project_id: String,
+    steps: serde_json::Value,
+    project_path: Option<String>,
+) -> Result<u64, String> {
+    state
+        .supervisor
+        .run_plan(session_id, project_id, steps, project_path)
         .await
         .map_err(|e| e.to_string())
 }
@@ -232,6 +260,16 @@ async fn select_folder() -> Result<Option<String>, String> {
     Ok(handle.map(|h| h.path().to_string_lossy().to_string()))
 }
 
+#[tauri::command]
+async fn select_file() -> Result<Option<String>, String> {
+    let handle = rfd::AsyncFileDialog::new()
+        .set_title("Select File to Attach")
+        .pick_file()
+        .await;
+
+    Ok(handle.map(|h| h.path().to_string_lossy().to_string()))
+}
+
 #[cfg(debug_assertions)]
 #[tauri::command]
 async fn kill_core_process(state: State<'_, AppState>) -> Result<(), String> {
@@ -271,6 +309,8 @@ pub fn run() {
             get_core_stderr_tail,
             send_chat_message,
             cancel_chat_stream,
+            respond_permission,
+            run_plan,
             invoke_core_rpc,
             get_recent_projects,
             add_recent_project,
@@ -285,6 +325,7 @@ pub fn run() {
             acknowledge_egress_event,
             execute_sandbox,
             select_folder,
+            select_file,
             #[cfg(debug_assertions)]
             kill_core_process
         ])

@@ -131,7 +131,7 @@ class CodeVerifierStrategy:
                 await self.turn_loop.session_store.append_event(
                     session_id=session_id,
                     event_type="verifier_step",
-                    data={
+                    payload={
                         "iteration": iteration,
                         "exit_code": last_output.exit_code,
                         "test_passed": test_passed,

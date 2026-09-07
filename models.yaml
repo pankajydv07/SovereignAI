@@ -3,31 +3,31 @@ ollama:
   host: http://127.0.0.1:11434
 roles:
   planner:
-  - qwen3:30b
   - gpt-oss:20b
+  - project-brain:latest
   coder:
-  - qwen3-coder:30b
-  - qwen3:30b
+  - gpt-oss:20b
+  - project-brain:latest
   writer:
-  - qwen3:30b
+  - gpt-oss:20b
+  - project-brain:latest
   vision:
   - qwen2.5vl:7b
   embedder:
-  - bge-m3
+  - nomic-embed-text:latest
   classifier:
-  - bge-m3
+  - nomic-embed-text:latest
 overrides:
-  qwen3-coder:30b:
+  gpt-oss:20b:
     num_ctx: 32768
     keep_alive: 30m
-    temperature: 0.2
-  qwen3:30b:
+  project-brain:latest:
     num_ctx: 32768
     keep_alive: 30m
   qwen2.5vl:7b:
     num_ctx: 16384
     keep_alive: 5m
-  bge-m3:
+  nomic-embed-text:latest:
     keep_alive: '-1'
 routing:
   classes:
@@ -50,7 +50,27 @@ routing:
     w3_latency: 0.15
     w4_swap_penalty: 0.2
 priors:
-  qwen3-coder:30b:
+  gpt-oss:20b:
+    code_generate: 1.0
+    code_debug: 1.0
+    doc_summarise: 1.0
+    doc_extract: 1.0
+    engineering_calc: 1.0
+    official_drafting: 1.0
+    vision_ocr: 1.0
+    kb_qa: 1.0
+    other: 1.0
+  project-brain:latest:
+    code_generate: 1.0
+    code_debug: 1.0
+    doc_summarise: 1.0
+    doc_extract: 1.0
+    engineering_calc: 1.0
+    official_drafting: 1.0
+    vision_ocr: 1.0
+    kb_qa: 1.0
+    other: 1.0
+  qwen2.5vl:7b:
     code_generate: 1.0
     code_debug: 1.0
     doc_summarise: 1.0
@@ -62,5 +82,5 @@ priors:
     other: 1.0
 bench_metadata:
   gpu: NVIDIA GeForce RTX 4090 (Detected)
-  date: '2026-09-06'
+  date: '2026-09-07'
   suite: eval suite v1

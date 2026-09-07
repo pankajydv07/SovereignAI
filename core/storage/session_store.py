@@ -255,6 +255,16 @@ class SessionStore:
             session["updatedAtMs"] = now
             return session
 
+    async def update_session_title(self, session_id: str, title: str) -> None:
+        """Update session human-readable title."""
+        now = current_time_ms()
+        async with self._get_connection() as conn:
+            await conn.execute(
+                "UPDATE sessions SET title = ?, updated_at_ms = ? WHERE id = ?",
+                (title, now, session_id),
+            )
+            await conn.commit()
+
     async def list_sessions(self, project_id: str | None = None) -> list[dict[str, Any]]:
         """List sessions optionally filtered by project_id, ordered by recent update."""
         async with self._get_connection() as conn:

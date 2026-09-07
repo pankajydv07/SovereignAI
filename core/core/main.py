@@ -2,33 +2,83 @@
 
 import asyncio
 import json
-import sys
+import logging
 from pathlib import Path
+import sys
 from typing import Any
+import uuid
 
 # Ensure core package root is in sys.path when invoked directly as a script
 core_root = Path(__file__).resolve().parent.parent
 if str(core_root) not in sys.path:
     sys.path.insert(0, str(core_root))
 
-from models.discovery import ModelDiscoverer  # noqa: E402
-from models.ollama import OllamaApiError, OllamaClient, OllamaUnreachableError  # noqa: E402
-from models.registry import ModelNotInstalledError, ModelRegistry, NoModelForRoleError  # noqa: E402
-from storage import SessionNotFoundError, SessionStore  # noqa: E402
+from core.chat_handlers import ChatManager
+from agent.policy import PolicyEngine
+from models.discovery import ModelDiscoverer
+from models.ollama import OllamaClient
+from models.registry import ModelRegistry
+from models.router import ModelRouter
+from storage import SessionNotFoundError, SessionStore
+from tools.registry import create_default_tool_registry
 
-SUPPORTED_PROTOCOL_VERSION = "2024-11-05"
+SUPPORTED_PROTOCOL_VERSION = "2026-03-01"
 
-# Global state managers
-registry = ModelRegistry()
+log = logging.getLogger(__name__)
+
+# Core state singletons
+model_registry = ModelRegistry()
+tool_registry = create_default_tool_registry()
 ollama_client = OllamaClient()
-active_streams: dict[Any, asyncio.Task[None]] = {}
+router = ModelRouter(model_registry)
+policy_engine = PolicyEngine()
 session_stores: dict[str, SessionStore] = {}
+
+
+def sanitize_surrogates(obj: Any) -> Any:
+    if isinstance(obj, str):
+        return obj.encode("utf-8", "replace").decode("utf-8")
+    if isinstance(obj, dict):
+        return {k: sanitize_surrogates(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_surrogates(v) for v in obj]
+    return obj
 
 
 def log_stderr(message: str) -> None:
     """Write diagnostic messages exclusively to stderr."""
-    sys.stderr.write(f"[core] {message}\n")
-    sys.stderr.flush()
+    msg_clean = str(message).encode("utf-8", errors="replace").decode("utf-8")
+    sys.stderr.buffer.write(f"[core] {msg_clean}\n".encode("utf-8", errors="replace"))
+    sys.stderr.buffer.flush()
+
+
+def send_rpc_response(response: dict[str, Any]) -> None:
+    """Send a single newline-delimited JSON-RPC response over stdout."""
+    clean_resp = sanitize_surrogates(response)
+    line = json.dumps(clean_resp, ensure_ascii=False) + "\n"
+    sys.stdout.buffer.write(line.encode("utf-8", errors="replace"))
+    sys.stdout.buffer.flush()
+
+
+def send_rpc_notification(method: str, params: dict[str, Any]) -> None:
+    """Send a JSON-RPC notification object over stdout."""
+    send_rpc_response({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params,
+    })
+
+
+chat_manager = ChatManager(
+    model_registry=model_registry,
+    tool_registry=tool_registry,
+    ollama_client=ollama_client,
+    router=router,
+    policy_engine=policy_engine,
+    send_notification_fn=send_rpc_notification,
+    send_response_fn=send_rpc_response,
+    log_stderr_fn=log_stderr,
+)
 
 
 def get_session_store(
@@ -45,157 +95,14 @@ def get_session_store(
 
     target_str = str(target)
     if target_str not in session_stores:
-        session_stores[target_str] = SessionStore(target)
+        store = SessionStore(target)
+        session_stores[target_str] = store
+        policy_engine.session_store = store
     return session_stores[target_str]
 
 
-def send_rpc_response(response: dict[str, Any]) -> None:
-    """Send a single newline-delimited JSON-RPC response over stdout."""
-    line = json.dumps(response) + "\n"
-    sys.stdout.write(line)
-    sys.stdout.flush()
-
-
-def send_rpc_notification(method: str, params: dict[str, Any]) -> None:
-    """Send a JSON-RPC notification object over stdout."""
-    send_rpc_response({
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": params,
-    })
-
-
-async def handle_chat_stream(msg_id: Any, params: dict[str, Any]) -> None:
-    """Stream chat response from Ollama for a requested role."""
-    role_name = params.get("role", "writer")
-    messages = params.get("messages", [])
-    session_id = params.get("sessionId")
-    project_path = params.get("projectPath")
-    db_path = params.get("dbPath")
-
-    try:
-        model_tag = registry.resolve(role_name)
-    except NoModelForRoleError as exc:
-        send_rpc_response({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "error": {"code": -32001, "message": str(exc)},
-        })
-        return
-
-    store = get_session_store(project_path=project_path, db_path=db_path)
-    if session_id:
-        try:
-            await store.append_event(
-                session_id,
-                "message_started",
-                {"role": role_name, "model": model_tag, "messages": messages},
-            )
-        except Exception as err:
-            log_stderr(f"Failed to record message_started event: {err}")
-
-    overrides = registry.get_overrides(model_tag)
-    keep_alive = overrides.get("keep_alive", "30m")
-    options = {
-        k: v for k, v in overrides.items() if k in ("num_ctx", "temperature")
-    }
-
-    log_stderr(f"Starting chat stream for role '{role_name}' resolved to tag '{model_tag}'")
-
-    accumulated_content = ""
-    accumulated_thinking = ""
-    metrics: dict[str, Any] = {}
-
-    try:
-        async for chunk in ollama_client.stream_chat(
-            model=model_tag,
-            messages=messages,
-            options=options if options else None,
-            keep_alive=keep_alive,
-        ):
-            delta_content = ""
-            delta_thinking = ""
-
-            msg_obj = chunk.get("message", {})
-            if isinstance(msg_obj, dict):
-                delta_content = msg_obj.get("content", "")
-                delta_thinking = msg_obj.get("thinking", "")
-
-            accumulated_content += delta_content
-            accumulated_thinking += delta_thinking
-
-            # Collect timing stats on completion chunk
-            if chunk.get("done"):
-                metrics = {
-                    "total_duration": chunk.get("total_duration", 0),
-                    "load_duration": chunk.get("load_duration", 0),
-                    "prompt_eval_count": chunk.get("prompt_eval_count", 0),
-                    "eval_count": chunk.get("eval_count", 0),
-                    "eval_duration": chunk.get("eval_duration", 0),
-                }
-
-            send_rpc_notification("chat/token", {
-                "id": msg_id,
-                "role": role_name,
-                "model": model_tag,
-                "delta": delta_content,
-                "thinking_delta": delta_thinking,
-                "content": accumulated_content,
-                "thinking": accumulated_thinking,
-            })
-
-        if session_id:
-            try:
-                await store.append_event(
-                    session_id,
-                    "message_completed",
-                    {
-                        "role": role_name,
-                        "model": model_tag,
-                        "content": accumulated_content,
-                        "thinking": accumulated_thinking,
-                        "metrics": metrics,
-                    },
-                )
-            except Exception as err:
-                log_stderr(f"Failed to record message_completed event: {err}")
-
-        send_rpc_response({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {
-                "status": "completed",
-                "role": role_name,
-                "model": model_tag,
-                "content": accumulated_content,
-                "thinking": accumulated_thinking,
-                "metrics": metrics,
-            },
-        })
-
-    except asyncio.CancelledError:
-        log_stderr(f"Chat stream for request id={msg_id} cancelled.")
-        send_rpc_notification("chat/interrupted", {
-            "id": msg_id,
-            "reason": "cancelled",
-        })
-        raise
-    except (OllamaUnreachableError, OllamaApiError) as err:
-        log_stderr(f"Chat stream error: {err}")
-        send_rpc_response({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "error": {"code": -32002, "message": str(err)},
-        })
-    finally:
-        active_streams.pop(msg_id, None)
-
-
 async def handle_rpc_message(line: str) -> bool:
-    """Process a single stdio JSON-RPC line.
-
-    Returns True if execution should continue, False on shutdown.
-    """
+    """Process a single stdio JSON-RPC line."""
     try:
         data: dict[str, Any] = json.loads(line)
         method = data.get("method")
@@ -203,38 +110,17 @@ async def handle_rpc_message(line: str) -> bool:
         params = data.get("params", {})
 
         if method == "initialize":
-            req_version = params.get("protocolVersion")
-            log_stderr(f"Initialize received with protocolVersion={req_version}")
-
-            # Pre-flight model validation
-            status = "ready"
-            try:
-                installed = await ollama_client.get_installed_tags()
-                registry.validate_models(installed)
-                log_stderr("Pre-flight model validation succeeded.")
-            except ModelNotInstalledError as exc:
-                log_stderr(f"Pre-flight model validation failed: {exc}")
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32003, "message": str(exc)},
-                })
-                return True
-            except OllamaUnreachableError as exc:
-                log_stderr(f"Ollama offline during initialize: {exc}")
-                status = "degraded"
-
             send_rpc_response({
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
                     "protocolVersion": SUPPORTED_PROTOCOL_VERSION,
                     "version": "0.1.0",
-                    "status": status,
+                    "status": "ready",
                     "capabilities": {
-                        "agent_loop": False,
+                        "agent_loop": True,
                         "session_store": True,
-                        "tools": [],
+                        "tools": [t.name for t in tool_registry.list_all()],
                     },
                 },
             })
@@ -249,93 +135,29 @@ async def handle_rpc_message(line: str) -> bool:
             return True
 
         if method == "session/new":
-            project_id = params.get("projectId", "default-project")
+            p_id = params.get("projectId", "default-project")
             title = params.get("title")
-            project_path = params.get("projectPath")
-            db_path = params.get("dbPath")
-            session_id = params.get("sessionId")
-
-            if not session_id:
-                import uuid
-                session_id = str(uuid.uuid4())
-
-            store = get_session_store(project_path=project_path, db_path=db_path)
-            res = await store.create_session(session_id, project_id, title)
+            s_id = params.get("sessionId") or str(uuid.uuid4())
+            store = get_session_store(
+                params.get("projectPath"), params.get("dbPath")
+            )
+            res = await store.create_session(s_id, p_id, title)
             send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
             return True
 
         if method == "session/load":
-            session_id = params.get("sessionId")
-            project_path = params.get("projectPath")
-            db_path = params.get("dbPath")
-
-            if not session_id:
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32602, "message": "Missing 'sessionId' param"},
-                })
-                return True
-
-            store = get_session_store(project_path=project_path, db_path=db_path)
+            s_id = params.get("sessionId")
+            store = get_session_store(
+                params.get("projectPath"), params.get("dbPath")
+            )
             try:
-                session_info = await store.get_session(session_id)
-                events = await store.load_session_events(session_id)
+                s_info = await store.get_session(s_id)
+                events = await store.load_session_events(s_id)
                 send_rpc_response({
                     "jsonrpc": "2.0",
                     "id": msg_id,
-                    "result": {"session": session_info, "events": events},
+                    "result": {"session": s_info, "events": events},
                 })
-            except SessionNotFoundError as err:
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32004, "message": str(err)},
-                })
-            return True
-
-        if method == "session/resume":
-            session_id = params.get("sessionId")
-            project_path = params.get("projectPath")
-            db_path = params.get("dbPath")
-
-            if not session_id:
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32602, "message": "Missing 'sessionId' param"},
-                })
-                return True
-
-            store = get_session_store(project_path=project_path, db_path=db_path)
-            try:
-                res = await store.resume_session(session_id)
-                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
-            except SessionNotFoundError as err:
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32004, "message": str(err)},
-                })
-            return True
-
-        if method == "session/close":
-            session_id = params.get("sessionId")
-            project_path = params.get("projectPath")
-            db_path = params.get("dbPath")
-
-            if not session_id:
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32602, "message": "Missing 'sessionId' param"},
-                })
-                return True
-
-            store = get_session_store(project_path=project_path, db_path=db_path)
-            try:
-                res = await store.close_session(session_id)
-                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
             except SessionNotFoundError as err:
                 send_rpc_response({
                     "jsonrpc": "2.0",
@@ -345,12 +167,10 @@ async def handle_rpc_message(line: str) -> bool:
             return True
 
         if method == "session/list":
-            project_id = params.get("projectId")
-            project_path = params.get("projectPath")
-            db_path = params.get("dbPath")
-
-            store = get_session_store(project_path=project_path, db_path=db_path)
-            sessions = await store.list_sessions(project_id=project_id)
+            store = get_session_store(
+                params.get("projectPath"), params.get("dbPath")
+            )
+            sessions = await store.list_sessions(params.get("projectId"))
             send_rpc_response({
                 "jsonrpc": "2.0",
                 "id": msg_id,
@@ -359,15 +179,18 @@ async def handle_rpc_message(line: str) -> bool:
             return True
 
         if method == "chat/stream":
-            task = asyncio.create_task(handle_chat_stream(msg_id, params))
-            active_streams[msg_id] = task
+            store = get_session_store(
+                params.get("projectPath"), params.get("dbPath")
+            )
+            task = asyncio.create_task(
+                chat_manager.handle_chat_stream(msg_id, params, store)
+            )
+            chat_manager.active_streams[msg_id] = task
             return True
 
         if method == "chat/stop":
-            target_id = params.get("id")
-            if target_id in active_streams:
-                active_streams[target_id].cancel()
-                log_stderr(f"Cancelled active stream id={target_id}")
+            target_id = str(params.get("id") or params.get("sessionId"))
+            chat_manager.stop_chat(target_id)
             send_rpc_response({
                 "jsonrpc": "2.0",
                 "id": msg_id,
@@ -375,60 +198,67 @@ async def handle_rpc_message(line: str) -> bool:
             })
             return True
 
+        if method == "permission/respond":
+            req_id = params.get("requestId", "")
+            opt = params.get("selectedOption", "")
+            pat = params.get("resourcePattern")
+            chat_manager.handle_permission_response(req_id, opt, pat)
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"status": "acknowledged", "requestId": req_id},
+            })
+            return True
+
+        if method == "plan/run":
+            store = get_session_store(
+                params.get("projectPath"), params.get("dbPath")
+            )
+            task = asyncio.create_task(
+                chat_manager.handle_plan_run(msg_id, params, store)
+            )
+            chat_manager.active_streams[msg_id] = task
+            return True
+
         if method == "models/roster":
-            try:
-                discoverer = ModelDiscoverer(ollama_client)
-                discovered = await discoverer.discover_all()
-                running = await ollama_client.get_running_models()
-                installed_tags = {d.tag for d in discovered}
-                fulfilment = registry.get_role_fulfilment_status(installed_tags, running)
-
-                roster_models = []
-                running_map = {
-                    m.get("name") or m.get("model"): m for m in running if isinstance(m, dict)
+            discoverer = ModelDiscoverer(ollama_client)
+            discovered = await discoverer.discover_all()
+            running = await ollama_client.get_running_models()
+            fulfilment = model_registry.get_role_fulfilment_status(
+                {d.tag for d in discovered}, running
+            )
+            roster_models = [
+                {
+                    "tag": d.tag,
+                    "digest": d.digest,
+                    "parameterSize": d.parameter_size,
+                    "quantization": d.quantization_level,
+                    "contextLength": model_registry.get_num_ctx(
+                        d.tag, d.context_length
+                    ),
+                    "discoveredMaxContext": d.context_length,
+                    "supportsVision": d.supports_vision,
+                    "supportsThinking": d.supports_thinking,
+                    "supportsTools": d.supports_tools,
+                    "isResident": any(
+                        (m.get("name") or m.get("model")) == d.tag
+                        for m in running
+                        if isinstance(m, dict)
+                    ),
+                    "sizeVram": 0,
+                    "sizeTotal": 0,
                 }
-
-                for d in discovered:
-                    is_res = d.tag in running_map
-                    r_info = running_map.get(d.tag, {})
-                    vram_bytes = r_info.get("size_vram", 0)
-                    total_bytes = r_info.get("size", 0)
-                    effective_ctx = registry.get_num_ctx(d.tag, d.context_length)
-
-                    roster_models.append({
-                        "tag": d.tag,
-                        "digest": d.digest,
-                        "parameterSize": d.parameter_size,
-                        "quantization": d.quantization_level,
-                        "contextLength": effective_ctx,
-                        "discoveredMaxContext": d.context_length,
-                        "supportsVision": d.supports_vision,
-                        "supportsThinking": d.supports_thinking,
-                        "supportsTools": d.supports_tools,
-                        "isResident": is_res,
-                        "sizeVram": vram_bytes,
-                        "sizeTotal": total_bytes,
-                    })
-
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "result": {
-                        "fulfilment": fulfilment,
-                        "models": roster_models,
-                    },
-                })
-            except Exception as err:
-                send_rpc_response({
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "error": {"code": -32000, "message": str(err)},
-                })
+                for d in discovered
+            ]
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"fulfilment": fulfilment, "models": roster_models},
+            })
             return True
 
         if method == "shutdown":
-            log_stderr("Received shutdown request from supervisor.")
-            for task in active_streams.values():
+            for task in chat_manager.active_streams.values():
                 task.cancel()
             send_rpc_response({
                 "jsonrpc": "2.0",
@@ -441,12 +271,8 @@ async def handle_rpc_message(line: str) -> bool:
             send_rpc_response({
                 "jsonrpc": "2.0",
                 "id": msg_id,
-                "error": {
-                    "code": -32601,
-                    "message": f"Method not found: {method}",
-                },
+                "error": {"code": -32601, "message": f"Method not found: {method}"},
             })
-            return True
 
     except Exception as err:
         log_stderr(f"Error processing RPC line: {err}")
@@ -457,15 +283,11 @@ async def handle_rpc_message(line: str) -> bool:
 async def main() -> None:
     """Main stdio loop reading JSON-RPC from stdin."""
     log_stderr("SWARAJ Agent Core starting on stdio...")
-
     loop = asyncio.get_running_loop()
-
     while True:
         line = await loop.run_in_executor(None, sys.stdin.readline)
         if not line:
-            log_stderr("Stdin EOF received, exiting core main loop.")
             break
-
         trimmed = line.strip()
         if trimmed:
             should_continue = await handle_rpc_message(trimmed)
@@ -475,4 +297,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

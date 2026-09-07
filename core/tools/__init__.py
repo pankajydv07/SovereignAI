@@ -2,6 +2,11 @@
 
 from tools.base import BaseTool, SideEffect, ToolContext, ToolKind, ToolResult
 from tools.code_exec import CodeExecInput, CodeExecOutput, CodeExecTool
+from tools.generate_document import (
+    GenerateDocumentInput,
+    GenerateDocumentOutput,
+    GenerateDocumentTool,
+)
 from tools.render_deliverable import (
     RenderDeliverableInput,
     RenderDeliverableOutput,
@@ -18,9 +23,13 @@ __all__ = [
     "CodeExecInput",
     "CodeExecOutput",
     "CodeExecTool",
+    "GenerateDocumentInput",
+    "GenerateDocumentOutput",
+    "GenerateDocumentTool",
     "RenderDeliverableInput",
     "RenderDeliverableOutput",
     "RenderDeliverableTool",
     "WorkspaceAccessError",
     "verify_workspace_path",
 ]
+

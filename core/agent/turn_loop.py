@@ -1,13 +1,18 @@
-"""SWARAJ Agent Turn Loop, Argument Repair, Budget Tracking, and Cancellation."""
+"""SWARAJ Agent Turn Loop, Argument Repair, Budget Tracking, and Policy Approval."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
+import json
 import logging
 from pathlib import Path
+import time
 from typing import Any
 
 from pydantic import ValidationError
 
 from agent.budget import RunBudgetTracker, StopReason
+from agent.policy import PolicyDecision, PolicyEngine
+from agent.resources import compute_default_resource_pattern, extract_resource_string
 from models.ollama import OllamaClient
 from tools.base import ToolContext, ToolResult
 from tools.registry import ToolRegistry
@@ -46,11 +51,18 @@ class TurnLoop:
         ollama_client: OllamaClient,
         tool_registry: ToolRegistry,
         budget_tracker: RunBudgetTracker,
+        policy_engine: PolicyEngine | None = None,
+        permission_requester: Callable[
+            [str, str, str, str, str], Awaitable[tuple[str, str | None]]
+        ]
+        | None = None,
         session_store: Any | None = None,
     ) -> None:
         self.ollama = ollama_client
         self.registry = tool_registry
         self.tracker = budget_tracker
+        self.policy_engine = policy_engine or PolicyEngine(session_store=session_store)
+        self.permission_requester = permission_requester
         self.session_store = session_store
         self.active_task: asyncio.Task[Any] | None = None
         self._cancelled: bool = False
@@ -70,10 +82,124 @@ class TurnLoop:
                 await self.session_store.append_event(
                     session_id=session_id,
                     event_type="checkpoint",
-                    data={"state": state, "details": details},
+                    payload={"state": state, "details": details},
                 )
             except Exception as exc:
                 log.warning(f"failed_to_write_checkpoint: {exc}")
+
+    async def _handle_tool_call(
+        self,
+        call: dict[str, Any],
+        session_id: str,
+        project_id: str,
+        ctx: ToolContext,
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        """Validate, evaluate policy, and execute a single tool call."""
+        fn = call.get("function", {})
+        name = fn.get("name", "")
+        raw_args = fn.get("arguments", {})
+        if isinstance(raw_args, str):
+            try:
+                raw_args = json.loads(raw_args)
+            except Exception:
+                pass
+
+        tool_inst = self.registry.get(name)
+        if not tool_inst:
+            valid_tools = [t.name for t in self.registry.list_all()]
+            return None, f"Unknown tool '{name}'. Valid tools: {valid_tools}"
+
+        try:
+            validated_args = tool_inst.input_model.model_validate(raw_args)
+            res_str = extract_resource_string(name, raw_args)
+
+            decision, matched_pat = await self.policy_engine.decide(
+                subject=None,
+                tool=name,
+                resource=res_str,
+                side_effect=tool_inst.side_effect,
+                project_id=project_id,
+            )
+
+            if decision == PolicyDecision.DENY:
+                return {
+                    "role": "tool",
+                    "tool_name": name,
+                    "content": f"Refusal: Execution of '{name}' on '{res_str}' is denied by rule '{matched_pat}'.",
+                    "success": False,
+                }, None
+
+            if decision == PolicyDecision.ASK:
+                if self.permission_requester is None:
+                    return {
+                        "role": "tool",
+                        "tool_name": name,
+                        "content": f"Refusal: Tool '{name}' requires approval but permission requester is unavailable (fail-closed).",
+                        "success": False,
+                    }, None
+
+                await self.checkpoint_partial_state(
+                    session_id,
+                    "pending_approval",
+                    {"tool": name, "resource": res_str, "args": raw_args},
+                )
+
+                t_before_approval = time.monotonic()
+                try:
+                    async with asyncio.timeout(120.0):
+                        choice, chosen_pat = await self.permission_requester(
+                            name,
+                            tool_inst.side_effect.value,
+                            f"Execute {name} on {res_str}",
+                            res_str,
+                            project_id,
+                        )
+                except TimeoutError:
+                    await self.checkpoint_partial_state(
+                        session_id, "approval_timed_out", {"tool": name, "resource": res_str}
+                    )
+                    return {
+                        "role": "tool",
+                        "tool_name": name,
+                        "content": f"Refusal: Approval request for '{name}' timed out after 120s.",
+                        "success": False,
+                    }, None
+                finally:
+                    t_waited = time.monotonic() - t_before_approval
+                    self.tracker.start_time += t_waited
+
+                if choice in ("allow_once", "allow_session", "always_allow"):
+                    pat_to_save = chosen_pat or compute_default_resource_pattern(res_str)
+                    if choice == "allow_session":
+                        self.policy_engine.add_session_rule(project_id, name, pat_to_save)
+                    elif (
+                        choice == "always_allow"
+                        and self.session_store
+                        and hasattr(self.session_store, "save_project_policy")
+                    ):
+                        await self.session_store.save_project_policy(
+                            project_id, name, pat_to_save, "always_allow"
+                        )
+                else:
+                    return {
+                        "role": "tool",
+                        "tool_name": name,
+                        "content": f"Refusal: Permission denied by user for '{name}'.",
+                        "success": False,
+                    }, None
+
+            result: ToolResult = await tool_inst.run(validated_args, ctx)
+            return {
+                "role": "tool",
+                "tool_name": name,
+                "content": str(result.output if result.success else result.error),
+                "success": result.success,
+            }, None
+
+        except ValidationError as val_exc:
+            return None, f"Argument validation error for tool '{name}': {val_exc}"
+        except Exception as run_exc:
+            return None, f"Tool execution failed for '{name}': {run_exc}"
 
     async def run_step(
         self,
@@ -84,6 +210,10 @@ class TurnLoop:
         required_tool: str | None = None,
         supports_native_tools: bool = True,
         tool_context: ToolContext | None = None,
+        project_id: str = "default-project",
+        on_token: Callable[[str, str], Awaitable[None]] | None = None,
+        on_tool_call: Callable[[dict[str, Any], dict[str, Any] | None], Awaitable[None]]
+        | None = None,
     ) -> tuple[StopReason, list[dict[str, Any]]]:
         """Execute a single turn step with streaming, validation, repair, and budgeting."""
         if self._cancelled:
@@ -92,7 +222,6 @@ class TurnLoop:
             )
             return StopReason.CANCELLED, messages
 
-        # Check step ceiling budget
         stop_reason = self.tracker.get_stop_reason()
         if stop_reason:
             await self.checkpoint_partial_state(
@@ -100,21 +229,10 @@ class TurnLoop:
             )
             raise RunBudgetExhausted(stop_reason, messages)
 
-        # Check remaining wall clock time
-        rem_time = self.tracker.remaining_time_s()
-        if rem_time <= 0.0:
-            stop_reason = StopReason.MAX_TOKENS  # Wall-clock timeout mapped to max_tokens
-            await self.checkpoint_partial_state(
-                session_id, stop_reason.value, {"messages": messages}
-            )
-            raise RunBudgetExhausted(stop_reason, messages)
-
-        self.tracker.record_step()
         all_tools = self.registry.list_all()
         fallback_path = Path(all_tools[0].name) if all_tools else Path(".")
         ctx = tool_context or ToolContext(workspace_root=fallback_path)
 
-        # Prepared tool options
         tools_schema = (
             self.registry.to_ollama_tools(task_class) if supports_native_tools else None
         )
@@ -137,6 +255,7 @@ class TurnLoop:
                 )
                 return StopReason.CANCELLED, messages
 
+            self.tracker.record_step()
             rem_time = self.tracker.remaining_time_s()
             if rem_time <= 0.0:
                 stop_reason = StopReason.MAX_TOKENS
@@ -146,7 +265,6 @@ class TurnLoop:
                 raise RunBudgetExhausted(stop_reason, messages)
 
             try:
-                # Wrap model stream in asyncio.timeout for stream-level wall-clock safety
                 async with asyncio.timeout(rem_time):
                     thinking = ""
                     content = ""
@@ -166,13 +284,19 @@ class TurnLoop:
                             return StopReason.CANCELLED, messages
 
                         msg = chunk.get("message", {})
-                        thinking += msg.get("thinking", "")
-                        content += msg.get("content", "")
+                        raw_think = msg.get("thinking") or ""
+                        raw_cont = msg.get("content") or ""
+                        d_think = raw_think.encode("utf-8", "replace").decode("utf-8")
+                        d_cont = raw_cont.encode("utf-8", "replace").decode("utf-8")
+                        thinking += d_think
+                        content += d_cont
+
+                        if on_token and (d_cont or d_think):
+                            await on_token(d_cont, d_think)
 
                         if "tool_calls" in msg and msg["tool_calls"]:
                             tool_calls.extend(msg["tool_calls"])
 
-                        # Record tokens from Ollama done chunk
                         if chunk.get("done", False):
                             p_eval = chunk.get("prompt_eval_count", 0)
                             eval_c = chunk.get("eval_count", 0)
@@ -191,7 +315,6 @@ class TurnLoop:
                 )
                 raise RunBudgetExhausted(stop_reason, messages) from exc
 
-            # Append complete assistant message turn
             assistant_turn: dict[str, Any] = {
                 "role": "assistant",
                 "content": content,
@@ -203,7 +326,6 @@ class TurnLoop:
 
             messages.append(assistant_turn)
 
-            # Check missing tool call requirement repair case
             if required_tool and not tool_calls and not format_param:
                 if shared_repair_attempts < self.MAX_REPAIR_ATTEMPTS:
                     shared_repair_attempts += 1
@@ -216,46 +338,22 @@ class TurnLoop:
                 else:
                     break
 
-            # Handle case with no tool calls (natural text end of turn)
             if not tool_calls:
                 break
 
-            # Process tool calls with pre-execution validation & repair
             tool_errors: list[str] = []
             executed_tools: list[dict[str, Any]] = []
 
             for call in tool_calls:
-                fn = call.get("function", {})
-                name = fn.get("name", "")
-                raw_args = fn.get("arguments", {})
-
-                tool_inst = self.registry.get(name)
-                if not tool_inst:
-                    valid_tools = [t.name for t in self.registry.list_all()]
-                    tool_errors.append(
-                        f"Unknown tool '{name}'. Valid tools: {valid_tools}"
-                    )
-                    continue
-
-                try:
-                    # Pre-execution Pydantic validation
-                    validated_args = tool_inst.input_model.model_validate(raw_args)
-                    result: ToolResult = await tool_inst.run(validated_args, ctx)
-
-                    tool_obs = {
-                        "role": "tool",
-                        "tool_name": name,
-                        "content": str(result.output if result.success else result.error),
-                        "success": result.success,
-                    }
-                    executed_tools.append(tool_obs)
-
-                except ValidationError as val_exc:
-                    tool_errors.append(
-                        f"Argument validation error for tool '{name}': {val_exc}"
-                    )
-                except Exception as run_exc:
-                    tool_errors.append(f"Tool execution failed for '{name}': {run_exc}")
+                obs, err = await self._handle_tool_call(
+                    call, session_id, project_id, ctx
+                )
+                if on_tool_call:
+                    await on_tool_call(call, obs)
+                if err:
+                    tool_errors.append(err)
+                elif obs:
+                    executed_tools.append(obs)
 
             if tool_errors:
                 if shared_repair_attempts < self.MAX_REPAIR_ATTEMPTS:
@@ -268,15 +366,14 @@ class TurnLoop:
                     messages.append({"role": "user", "content": err_feedback_msg})
                     continue
 
-            # Successful tool execution / repair finished
-            # Prune failed intermediate repair attempts from history to save VRAM
             if shared_repair_attempts > 0:
-                # Keep messages before repair attempts plus the final successful assistant turn
                 successful_assistant_turn = messages[-1]
                 del messages[repair_checkpoint_index:]
                 messages.append(successful_assistant_turn)
 
             messages.extend(executed_tools)
-            break
+            shared_repair_attempts = 0
+            repair_checkpoint_index = len(messages)
+            continue
 
         return StopReason.END_TURN, messages

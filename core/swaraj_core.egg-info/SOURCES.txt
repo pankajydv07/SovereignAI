@@ -9,13 +9,17 @@ swaraj_core.egg-info/SOURCES.txt
 swaraj_core.egg-info/dependency_links.txt
 swaraj_core.egg-info/requires.txt
 swaraj_core.egg-info/top_level.txt
+tests/test_attestation.py
+tests/test_audit_chain.py
 tests/test_bench.py
+tests/test_calc_engine.py
 tests/test_code_exec_tool.py
 tests/test_ingest.py
 tests/test_kb.py
 tests/test_kill_resume_integration.py
 tests/test_model_discovery.py
 tests/test_models.py
+tests/test_pid_detector.py
 tests/test_planner_policy.py
 tests/test_protocol_cross_language.py
 tests/test_renderers.py

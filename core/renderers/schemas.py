@@ -5,6 +5,7 @@ Review Decks, Cost Sheets, and Engineering Calculations, enforcing render-time
 citation verification.
 """
 
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
 from calc.models import CalculationParameter, ParameterProvenance
@@ -41,6 +42,11 @@ class SystemProvenanceMetadata(BaseModel):
         default="DRAFT — requires approval by competent authority",
         description="Non-removable legal draft attestation banner",
     )
+    timestamp_utc: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        description="UTC generation timestamp",
+    )
+
 
 
 class SubstantiveClaim(BaseModel):

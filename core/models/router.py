@@ -1,12 +1,4 @@
-"""SWARAJ Two-Stage Model Router.
-
-5-stage routing pipeline:
-  Stage 0: Featurise prompt (modalities, mime types, estimated tokens, code fences, keyword hits).
-  Stage 1: Keyword fast path + Multinomial Naive Bayes embedding/feature classifier head.
-  Stage 2: Capability match against ModelRegistry.
-  Stage 3: Normalized multi-attribute scoring (quality prior, VRAM fit, latency, swap penalty).
-  Stage 4: Fallback declaration in RoutingDecision (Stateless core; TurnLoop owns escalation).
-"""
+"""SWARAJ Two-Stage Model Router."""
 
 import logging
 import math
@@ -94,8 +86,8 @@ class FeatureExtractor:
             "weld inspection", "flange rating", "extract the"
         ],
         "doc_summarise": [
-            "summarise the", "summarize the", "executive summary", "overview of the",
-            "synthesise the", "minutes of"
+            "summarise", "summarize", "executive summary", "overview of the",
+            "synthesise the", "minutes of", "summary of"
         ],
         "kb_qa": [
             "what is the governing", "procedure for", "what are the mandatory",
@@ -372,8 +364,7 @@ class ModelRouter:
                 latency_score=scoring_breakdown[tag]["latency_score"],
                 swap_penalty=scoring_breakdown[tag]["swap_penalty"],
                 total_score=scoring_breakdown[tag]["total_score"],
-                is_winner=is_win,
-                rejection_reason=reason,
+                is_winner=is_win, rejection_reason=reason,
             )
             candidate_objects.append(cand_score)
 

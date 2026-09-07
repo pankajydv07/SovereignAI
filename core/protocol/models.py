@@ -280,3 +280,41 @@ class SandboxExecResult(ProtocolBaseModel):
     duration_ms: int = Field(alias="durationMs")
     timed_out: bool = Field(alias="timedOut")
     output_artifacts: list[str] = Field(default_factory=list, alias="outputArtifacts")
+
+
+PermissionOption = Literal["allow_once", "allow_session", "always_allow", "deny"]
+
+
+class PermissionRequestParams(ProtocolBaseModel):
+    request_id: str = Field(alias="requestId")
+    tool: str
+    side_effect: str = Field(alias="sideEffect")
+    description: str
+    resource: str | None = None
+    resource_pattern: str | None = Field(default=None, alias="resourcePattern")
+    options: list[PermissionOption] = Field(default_factory=list)
+    diff: DiffContent | None = None
+
+
+class PermissionResponseParams(ProtocolBaseModel):
+    request_id: str = Field(alias="requestId")
+    selected_option: PermissionOption = Field(alias="selectedOption")
+    resource_pattern: str | None = Field(default=None, alias="resourcePattern")
+
+
+class ChatRoutingParams(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    project_id: str = Field(alias="projectId")
+    prompt: str
+    task_class: str = Field(alias="taskClass")
+    model_tag: str = Field(alias="modelTag")
+    confidence: float
+    reasoning: str | None = None
+
+
+class PlanRunParams(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    project_id: str = Field(alias="projectId")
+    project_path: str | None = Field(default=None, alias="projectPath")
+    db_path: str | None = Field(default=None, alias="dbPath")
+    steps: list[PlanStep] = Field(default_factory=list)

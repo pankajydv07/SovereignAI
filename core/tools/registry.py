@@ -10,14 +10,21 @@ class ToolRegistry:
 
     # Default tool subsets per task class (max 6 tools per class for local model reliability)
     TASK_CLASS_MAP: dict[str, list[str]] = {
-        "code_generate": ["fs_read", "fs_list", "glob", "fs_write", "code_exec"],
+        "official_drafting": ["fs_read", "fs_write", "render_deliverable", "calc_exec", "kb_search"],
+        "doc_summarise": ["fs_read", "fs_list", "glob", "fs_write", "generate_document", "kb_search"],
+        "doc_extract": ["fs_read", "fs_list", "glob", "doc_ingest", "generate_document"],
+        "code_generate": ["fs_read", "fs_list", "glob", "fs_write", "code_exec", "generate_document"],
         "code_debug": ["fs_read", "fs_list", "glob", "fs_write", "code_exec"],
         "code": ["fs_read", "fs_list", "glob", "fs_write", "code_exec", "calc_exec"],
         "planner": ["fs_read", "fs_list", "glob"],
-        "writer": ["fs_read", "fs_write", "render_deliverable", "calc_exec"],
+        "writer": ["fs_read", "fs_write", "render_deliverable", "calc_exec", "kb_search"],
         "calc": ["fs_read", "fs_write", "code_exec", "calc_exec"],
+        "engineering_calc": ["fs_read", "fs_write", "code_exec", "calc_exec"],
         "render": ["fs_read", "fs_write", "render_deliverable"],
-        "default": ["fs_read", "fs_list", "glob", "fs_write", "render_deliverable", "calc_exec"],
+        "kb_qa": ["fs_read", "fs_list", "kb_search", "fs_write"],
+        "vision_ocr": ["fs_read", "fs_list", "glob", "doc_ingest"],
+        "other": ["fs_read", "fs_list", "glob", "fs_write", "generate_document", "calc_exec"],
+        "default": ["fs_read", "fs_list", "glob", "fs_write", "generate_document", "calc_exec"],
     }
 
     MAX_TOOLS_PER_TASK: int = 6
@@ -49,3 +56,30 @@ class ToolRegistry:
         """Export Ollama tool function schemas for the selected task class or all tools."""
         tools = self.get_tools_for_task(task_class) if task_class else self.list_all()
         return [tool.to_ollama_tool() for tool in tools]
+
+
+def create_default_tool_registry() -> ToolRegistry:
+    """Construct a ToolRegistry populated with all standard built-in SWARAJ tools."""
+    from tools.calc_exec import CalcExecTool
+    from tools.code_exec import CodeExecTool
+    from tools.doc_ingest import DocIngestTool
+    from tools.fs_list import FsListTool
+    from tools.fs_read import FsReadTool
+    from tools.fs_write import FsWriteTool
+    from tools.generate_document import GenerateDocumentTool
+    from tools.glob import GlobTool
+    from tools.kb_search import KbSearchTool
+    from tools.render_deliverable import RenderDeliverableTool
+
+    reg = ToolRegistry()
+    reg.register(FsReadTool())
+    reg.register(FsWriteTool())
+    reg.register(FsListTool())
+    reg.register(GlobTool())
+    reg.register(DocIngestTool())
+    reg.register(KbSearchTool())
+    reg.register(CalcExecTool())
+    reg.register(CodeExecTool())
+    reg.register(RenderDeliverableTool())
+    reg.register(GenerateDocumentTool())
+    return reg

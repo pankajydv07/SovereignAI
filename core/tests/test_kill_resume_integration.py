@@ -47,7 +47,7 @@ async def test_subprocess_kill_and_resume_session(tmp_path: Path) -> None:
         return res
 
     # Initialize RPC
-    init_res = await call_rpc(proc1, "initialize", {"protocolVersion": "2024-11-05"}, 1)
+    init_res = await call_rpc(proc1, "initialize", {"protocolVersion": "2026-03-01"}, 1)
     assert init_res.get("result", {}).get("status") in ("ready", "degraded")
 
     # Create new session
@@ -65,11 +65,11 @@ async def test_subprocess_kill_and_resume_session(tmp_path: Path) -> None:
     )
     assert new_res.get("result", {}).get("sessionId") == session_id
 
-    # Step 2: Terminate core process forcefully via SIGKILL (proc1.kill())
+    # Step 2: Hard SIGKILL the core subprocess
     proc1.kill()
     await proc1.wait()
 
-    # Step 3: Respawn core process 2
+    # Step 3: Launch core subprocess 2
     proc2 = await asyncio.create_subprocess_exec(
         sys.executable,
         "-u",
@@ -80,13 +80,11 @@ async def test_subprocess_kill_and_resume_session(tmp_path: Path) -> None:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-
     assert proc2.stdin is not None
     assert proc2.stdout is not None
 
-    # Initialize RPC on process 2
-    init2 = await call_rpc(proc2, "initialize", {"protocolVersion": "2024-11-05"}, 10)
-    assert init2.get("result", {}).get("status") in ("ready", "degraded")
+    init_res2 = await call_rpc(proc2, "initialize", {"protocolVersion": "2026-03-01"}, 10)
+    assert init_res2.get("result", {}).get("status") in ("ready", "degraded")
 
     # Load session on process 2
     load_res = await call_rpc(

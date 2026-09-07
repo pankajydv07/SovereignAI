@@ -70,9 +70,17 @@ impl SandboxLauncher for BubblewrapLauncher {
             params.timeout_s
         };
 
-        // Create temporary work directory under system temp dir
-        let temp_dir_name = format!("swaraj_sandbox_{}", params.run_id);
-        let work_dir = std::env::temp_dir().join(temp_dir_name);
+        // Use supplied work_dir if exists, else create temporary work directory under system temp dir
+        let work_dir = if let Some(ref wd) = params.work_dir {
+            let p = PathBuf::from(wd);
+            if p.exists() {
+                p
+            } else {
+                std::env::temp_dir().join(format!("swaraj_sandbox_{}", params.run_id))
+            }
+        } else {
+            std::env::temp_dir().join(format!("swaraj_sandbox_{}", params.run_id))
+        };
         let out_dir = work_dir.join("out");
         fs::create_dir_all(&out_dir)?;
 

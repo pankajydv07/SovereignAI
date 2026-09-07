@@ -297,6 +297,44 @@ class SandboxExecResult(ProtocolBaseModel):
     duration_ms: int = Field(alias="durationMs")
     timed_out: bool = Field(alias="timedOut")
     output_artifacts: list[str] = Field(default_factory=list, alias="outputArtifacts")
+
+
+PermissionOption = Literal["allow_once", "allow_session", "always_allow", "deny"]
+
+
+class PermissionRequestParams(ProtocolBaseModel):
+    request_id: str = Field(alias="requestId")
+    tool: str
+    side_effect: str = Field(alias="sideEffect")
+    description: str
+    resource: str | None = None
+    resource_pattern: str | None = Field(default=None, alias="resourcePattern")
+    options: list[PermissionOption] = Field(default_factory=list)
+    diff: DiffContent | None = None
+
+
+class PermissionResponseParams(ProtocolBaseModel):
+    request_id: str = Field(alias="requestId")
+    selected_option: PermissionOption = Field(alias="selectedOption")
+    resource_pattern: str | None = Field(default=None, alias="resourcePattern")
+
+
+class ChatRoutingParams(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    project_id: str = Field(alias="projectId")
+    prompt: str
+    task_class: str = Field(alias="taskClass")
+    model_tag: str = Field(alias="modelTag")
+    confidence: float
+    reasoning: str | None = None
+
+
+class PlanRunParams(ProtocolBaseModel):
+    session_id: str = Field(alias="sessionId")
+    project_id: str = Field(alias="projectId")
+    project_path: str | None = Field(default=None, alias="projectPath")
+    db_path: str | None = Field(default=None, alias="dbPath")
+    steps: list[PlanStep] = Field(default_factory=list)
 '''
 
 RUST_CONTENT = '''// GENERATED FILE — DO NOT EDIT MANUALLY
@@ -433,6 +471,10 @@ pub struct PermissionRequestParams {
     pub tool: String,
     pub side_effect: String,
     pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_pattern: Option<String>,
     pub options: Vec<PermissionOption>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff: Option<DiffContent>,
@@ -443,6 +485,8 @@ pub struct PermissionRequestParams {
 pub struct PermissionResponseParams {
     pub request_id: String,
     pub selected_option: PermissionOption,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_pattern: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -611,6 +655,33 @@ pub struct SandboxExecResult {
     pub timed_out: bool,
     pub output_artifacts: Vec<String>,
 }
+
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatRoutingParams {
+    pub session_id: String,
+    pub project_id: String,
+    pub prompt: String,
+    pub task_class: String,
+    pub model_tag: String,
+    pub confidence: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanRunParams {
+    pub session_id: String,
+    pub project_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub db_path: Option<String>,
+    pub steps: Vec<PlanStep>,
+}
 '''
 
 TS_CONTENT = '''// GENERATED FILE — DO NOT EDIT MANUALLY
@@ -721,6 +792,8 @@ export const PermissionRequestParamsSchema = z.object({
   tool: z.string(),
   sideEffect: z.string(),
   description: z.string(),
+  resource: z.string().optional(),
+  resourcePattern: z.string().optional(),
   options: z.array(PermissionOptionSchema),
   diff: DiffContentSchema.optional(),
 });
@@ -729,6 +802,7 @@ export type PermissionRequestParams = z.infer<typeof PermissionRequestParamsSche
 export const PermissionResponseParamsSchema = z.object({
   requestId: z.string(),
   selectedOption: PermissionOptionSchema,
+  resourcePattern: z.string().optional(),
 });
 export type PermissionResponseParams = z.infer<typeof PermissionResponseParamsSchema>;
 
@@ -880,6 +954,26 @@ export const SandboxExecResultSchema = z.object({
   outputArtifacts: z.array(z.string()),
 });
 export type SandboxExecResult = z.infer<typeof SandboxExecResultSchema>;
+
+export const ChatRoutingParamsSchema = z.object({
+  sessionId: z.string(),
+  projectId: z.string(),
+  prompt: z.string(),
+  taskClass: z.string(),
+  modelTag: z.string(),
+  confidence: z.number(),
+  reasoning: z.string().optional(),
+});
+export type ChatRoutingParams = z.infer<typeof ChatRoutingParamsSchema>;
+
+export const PlanRunParamsSchema = z.object({
+  sessionId: z.string(),
+  projectId: z.string(),
+  projectPath: z.string().optional(),
+  dbPath: z.string().optional(),
+  steps: z.array(PlanStepSchema),
+});
+export type PlanRunParams = z.infer<typeof PlanRunParamsSchema>;
 '''
 
 

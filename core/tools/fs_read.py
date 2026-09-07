@@ -54,11 +54,25 @@ class FsReadTool(BaseTool[FsReadInput, FsReadOutput]):
             return ToolResult.failed(f"Path is not a regular file: {args.path}")
 
         try:
-            raw_bytes = target_path.read_bytes()
-            total_bytes = len(raw_bytes)
-            text = raw_bytes.decode("utf-8", errors="replace")
-            lines = text.splitlines(keepends=True)
-            total_lines = len(lines)
+            if target_path.suffix.lower() == ".pdf":
+                from pypdf import PdfReader
+                reader = PdfReader(str(target_path))
+                extracted_pages = []
+                for i, page in enumerate(reader.pages):
+                    raw_p = page.extract_text() or ""
+                    clean_p = raw_p.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
+                    extracted_pages.append(f"--- Page {i + 1} ---\n{clean_p}")
+                text = "\n\n".join(extracted_pages)
+                raw_bytes = text.encode("utf-8", errors="replace")
+                total_bytes = len(raw_bytes)
+                lines = text.splitlines(keepends=True)
+                total_lines = len(lines)
+            else:
+                raw_bytes = target_path.read_bytes()
+                total_bytes = len(raw_bytes)
+                text = raw_bytes.decode("utf-8", errors="replace")
+                lines = text.splitlines(keepends=True)
+                total_lines = len(lines)
         except Exception as exc:
             return ToolResult.failed(f"Failed to read file '{args.path}': {exc}")
 

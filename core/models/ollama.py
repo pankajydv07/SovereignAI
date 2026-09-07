@@ -29,6 +29,17 @@ class OllamaApiError(Exception):
         self.message = message
 
 
+def _clean_surrogates(obj: Any) -> Any:
+    """Recursively sanitize strings to replace lone UTF-16 surrogates with replacement chars."""
+    if isinstance(obj, str):
+        return obj.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
+    if isinstance(obj, dict):
+        return {_clean_surrogates(k): _clean_surrogates(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_clean_surrogates(x) for x in obj]
+    return obj
+
+
 class OllamaClient:
     """Async client for local Ollama server."""
 
@@ -138,6 +149,8 @@ class OllamaClient:
 
         if keep_alive:
             payload["keep_alive"] = keep_alive
+
+        payload = _clean_surrogates(payload)
 
         try:
             async with httpx.AsyncClient(timeout=None) as client:

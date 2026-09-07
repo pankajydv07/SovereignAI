@@ -123,20 +123,50 @@ impl CoreSupervisor {
 
     pub async fn send_chat_stream(
         &self,
-        role: String,
-        messages: serde_json::Value,
+        params: serde_json::Value,
     ) -> Result<u64, RpcError> {
-        self.send_rpc(
-            "chat/stream",
-            serde_json::json!({ "role": role, "messages": messages }),
-        )
-        .await
+        self.send_rpc("chat/stream", params).await
     }
 
     pub async fn stop_chat_stream(&self, stream_id: u64) -> Result<(), RpcError> {
         self.send_rpc("chat/stop", serde_json::json!({ "id": stream_id }))
             .await?;
         Ok(())
+    }
+
+    pub async fn respond_permission(
+        &self,
+        request_id: String,
+        selected_option: String,
+        resource_pattern: Option<String>,
+    ) -> Result<(), RpcError> {
+        let mut params = serde_json::json!({
+            "requestId": request_id,
+            "selectedOption": selected_option,
+        });
+        if let Some(pat) = resource_pattern {
+            params["resourcePattern"] = serde_json::Value::String(pat);
+        }
+        self.send_rpc("permission/respond", params).await?;
+        Ok(())
+    }
+
+    pub async fn run_plan(
+        &self,
+        session_id: String,
+        project_id: String,
+        steps: serde_json::Value,
+        project_path: Option<String>,
+    ) -> Result<u64, RpcError> {
+        let mut params = serde_json::json!({
+            "sessionId": session_id,
+            "projectId": project_id,
+            "steps": steps,
+        });
+        if let Some(p) = project_path {
+            params["projectPath"] = serde_json::Value::String(p);
+        }
+        self.send_rpc("plan/run", params).await
     }
 
     pub async fn start_supervision(self: Arc<Self>) {
@@ -310,6 +340,12 @@ impl CoreSupervisor {
                                     let _ = app.emit("chat-token-received", json_val.get("params"));
                                 } else if method == "chat/interrupted" {
                                     let _ = app.emit("chat-stream-interrupted", json_val.get("params"));
+                                } else if method == "chat/routing" {
+                                    let _ = app.emit("chat-routing", json_val.get("params"));
+                                } else if method == "permission/request" {
+                                    let _ = app.emit("permission-request", json_val.get("params"));
+                                } else if method == "session/update" {
+                                    let _ = app.emit("session-update", json_val.get("params"));
                                 }
                             }
                         } else if let Some(id) = json_val.get("id").and_then(|i| i.as_u64()) {

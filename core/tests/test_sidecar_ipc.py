@@ -29,7 +29,7 @@ async def test_initialize_and_ping_handshake() -> None:
         "jsonrpc": "2.0",
         "id": 1,
         "method": "initialize",
-        "params": {"protocolVersion": "2024-11-05"},
+        "params": {"protocolVersion": "2026-03-01"},
     }) + "\n"
     proc.stdin.write(init_req)
     proc.stdin.flush()
@@ -37,7 +37,7 @@ async def test_initialize_and_ping_handshake() -> None:
     init_resp_line = proc.stdout.readline()
     init_resp = json.loads(init_resp_line.strip())
     assert init_resp.get("id") == 1
-    assert init_resp["result"]["protocolVersion"] == "2024-11-05"
+    assert init_resp["result"]["protocolVersion"] == "2026-03-01"
     assert init_resp["result"]["version"] == "0.1.0"
 
     # 2. Ping

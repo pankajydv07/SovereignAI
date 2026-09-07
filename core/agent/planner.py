@@ -7,14 +7,23 @@ from pydantic import BaseModel, Field
 from models.ollama import OllamaClient
 
 
-class PlanStep(BaseModel):
+from protocol.models import ProtocolBaseModel
+
+
+class PlanStep(ProtocolBaseModel):
     """Individual plan step model matching ACP meta specifications."""
 
-    step_index: int = Field(description="1-indexed step order number")
+    step_index: int = Field(alias="stepIndex", description="1-indexed step order number")
     description: str = Field(description="Clear text description of the planned action")
     tool: str = Field(description="Name of the tool to be invoked")
-    side_effect: str = Field(description="Side effect classification: read, write, or exec")
-    requires_approval: bool = Field(description="True if side effect requires permission approval")
+    side_effect: str = Field(
+        default="read", alias="sideEffect", description="Side effect classification: read, write, or exec"
+    )
+    requires_approval: bool = Field(
+        default=False,
+        alias="requiresApproval",
+        description="True if side effect requires permission approval",
+    )
     idempotent: bool = Field(
         default=True, description="True if step execution can be safely retried"
     )
@@ -24,7 +33,7 @@ class PlanStep(BaseModel):
     )
 
 
-class PlanPayload(BaseModel):
+class PlanPayload(ProtocolBaseModel):
     """Top-level plan payload emitted via structured JSON Schema output."""
 
     steps: list[PlanStep]
