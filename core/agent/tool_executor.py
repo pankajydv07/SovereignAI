@@ -37,8 +37,8 @@ async def handle_tool_call(
     if isinstance(raw_args, str):
         try:
             raw_args = json.loads(raw_args)
-        except Exception:
-            pass
+        except json.JSONDecodeError as exc:
+            return None, f"Invalid JSON in tool arguments for '{name}': {exc}"
 
     tool_inst = registry.get(name)
     if not tool_inst:

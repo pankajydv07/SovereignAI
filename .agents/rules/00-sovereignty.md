@@ -17,6 +17,11 @@ This product's entire claim is that confidential refinery data never leaves the 
 5. **Sandboxed execution has no network interface.** Not "firewalled" — no interface exists.
 6. **Confidential content is never logged above DEBUG.** Prompts, document text, extracted values and file contents are the material we are protecting.
 7. **MCP servers are stdio transport only, and allowlisted.** No HTTP or SSE MCP transports.
+8. **No silent fallbacks or weakening of isolation guarantees.** Any fallback path that weakens an isolation guarantee, hides an error, or suppresses a missing tool/engine is a build-breaking defect:
+   - **Sandbox Fallbacks**: Never fall back to `subprocess.run()` when sandbox RPC is unavailable. Subprocesses without sandbox isolation execute model code with network exposure.
+   - **Workspace Boundary Guards**: Output paths in renderers and tools must route strictly through canonical workspace verification (`verify_workspace_path`). Never trust requested filenames directly.
+   - **Backend State Confirmation**: UI must never optimistically display states (approvals, verifications, rejections) before confirmed by the core. All RPC errors must be surfaced loudly.
+   - **Explicit Tool/Engine Failures**: Missing local dependencies (e.g. Tesseract OCR) must raise explicit errors naming the missing binary and installation steps, never silent empty output.
 
 ## Before you finish any task, verify
 
@@ -26,6 +31,7 @@ This product's entire claim is that confidential refinery data never leaves the 
 - [ ] No dependency added that checks for updates or sends telemetry
 - [ ] Any new subprocess specifies its network isolation explicitly
 - [ ] No confidential content logged at INFO or above
+- [ ] No silent fallback or swallowed error anywhere in the diff
 
 ## If you think you need an exception
 

@@ -8,7 +8,10 @@ and SQLite persistence.
 import math
 from typing import Any
 
+import structlog
 from pint import UnitRegistry
+
+log = structlog.get_logger()
 
 from calc.models import (
     CalculationExecutionRecord,
@@ -68,8 +71,13 @@ class CalculationRunner:
                 results = await kb_service.search(query, top_k=1)
                 if results and results[0].get("body_text"):
                     return (str(results[0]["body_text"]), False)
-            except Exception:
-                pass
+            except Exception as exc:
+                log.warning(
+                    "kb_clause_search_failed",
+                    standard=standard_code,
+                    clause=clause_ref,
+                    error=str(exc),
+                )
 
         # Return explicit manual verification marker when clause text is missing from KB
         missing_marker = (

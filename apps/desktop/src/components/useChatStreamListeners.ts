@@ -135,6 +135,10 @@ export function useChatStreamListeners({
         update: {
           type: string;
           steps?: PlanStepItem[];
+          sources?: any[];
+          isTruncated?: boolean;
+          totalMatches?: number;
+          showingCount?: number;
         };
       }>("session-update", (event) => {
         if (
@@ -142,6 +146,25 @@ export function useChatStreamListeners({
           event.payload.update.steps
         ) {
           setActivePlanSteps(event.payload.update.steps);
+        } else if (
+          event.payload.update.type === "sources" &&
+          event.payload.update.sources
+        ) {
+          const upd = event.payload.update;
+          setMessages((prev) =>
+            prev.map((msg, idx) => {
+              if (idx === prev.length - 1 && msg.sender === "assistant") {
+                return {
+                  ...msg,
+                  sources: upd.sources,
+                  isTruncated: upd.isTruncated,
+                  totalMatches: upd.totalMatches,
+                  showingCount: upd.showingCount,
+                };
+              }
+              return msg;
+            })
+          );
         }
       });
 

@@ -1,0 +1,282 @@
+[
+  {
+    "query": "How is remaining life calculated for refinery process piping under API 570?",
+    "relevant_doc_id": "API-570",
+    "relevant_clause": "7.1.1",
+    "is_relevant": true,
+    "query_type": "conceptual"
+  },
+  {
+    "query": "Formula for remaining life (t_actual - t_minimum) / C_rate",
+    "relevant_doc_id": "API-570",
+    "relevant_clause": "7.1.1",
+    "is_relevant": true,
+    "query_type": "exact_formula"
+  },
+  {
+    "query": "What action is required if remaining life of piping is less than 2 years?",
+    "relevant_doc_id": "API-570",
+    "relevant_clause": "7.1.1",
+    "is_relevant": true,
+    "query_type": "threshold_rule"
+  },
+  {
+    "query": "ASME Sec VIII Div 1 UG-27 cylindrical shell internal pressure formula",
+    "relevant_doc_id": "ASME-SEC-VIII",
+    "relevant_clause": "UG-27",
+    "is_relevant": true,
+    "query_type": "exact_tag"
+  },
+  {
+    "query": "How to calculate minimum required wall thickness t_min = (P * R) / (S * E - 0.6 * P)",
+    "relevant_doc_id": "ASME-SEC-VIII",
+    "relevant_clause": "UG-27",
+    "is_relevant": true,
+    "query_type": "formula"
+  },
+  {
+    "query": "Joint efficiency factor E and allowable stress S in shell calculation",
+    "relevant_doc_id": "ASME-SEC-VIII",
+    "relevant_clause": "UG-27",
+    "is_relevant": true,
+    "query_type": "parameter_lookup"
+  },
+  {
+    "query": "UT thickness gauge calibration using stepped reference block",
+    "relevant_doc_id": "SOP-MRPL-NDT-04",
+    "relevant_clause": "3.2",
+    "is_relevant": true,
+    "query_type": "procedure"
+  },
+  {
+    "query": "Non-destructive testing ultrasonic examination quarterly verification procedure",
+    "relevant_doc_id": "SOP-MRPL-NDT-04",
+    "relevant_clause": "3.2",
+    "is_relevant": true,
+    "query_type": "procedure"
+  },
+  {
+    "query": "अल्ट्रासोनिक मोटाई मापन जांच प्रक्रिया (Ultrasonic thickness gauging procedure)",
+    "relevant_doc_id": "SOP-MRPL-NDT-04",
+    "relevant_clause": "3.2",
+    "is_relevant": true,
+    "query_type": "bilingual_hindi"
+  },
+  {
+    "query": "Pressure safety valve pop testing frequency per OISD 129",
+    "relevant_doc_id": "OISD-STD-129",
+    "relevant_clause": "5.1",
+    "is_relevant": true,
+    "query_type": "standard_rule"
+  },
+  {
+    "query": "OISD-STD-129 inspection intervals for pressure vessels and storage tanks",
+    "relevant_doc_id": "OISD-STD-129",
+    "relevant_clause": "5.1",
+    "is_relevant": true,
+    "query_type": "exact_standard"
+  },
+  {
+    "query": "C-101 crude distillation column design pressure and operating temperature",
+    "relevant_doc_id": "C-101",
+    "relevant_clause": "Equipment Register",
+    "is_relevant": true,
+    "query_type": "equipment_tag"
+  },
+  {
+    "query": "Design pressure of Crude Distillation Column C-101 (2.4 MPa)",
+    "relevant_doc_id": "C-101",
+    "relevant_clause": "Equipment Register",
+    "is_relevant": true,
+    "query_type": "exact_spec"
+  },
+  {
+    "query": "PT-101 top column pressure transmitter operating parameters",
+    "relevant_doc_id": "PT-101",
+    "relevant_clause": "Equipment Register",
+    "is_relevant": true,
+    "query_type": "instrument_tag"
+  },
+  {
+    "query": "Crude feed flow controller FIC-204A service description and design conditions",
+    "relevant_doc_id": "FIC-204A",
+    "relevant_clause": "Equipment Register",
+    "is_relevant": true,
+    "query_type": "instrument_tag"
+  },
+  {
+    "query": "CML-07 wall thickness survey actual measurement 8.2 mm in shell 3",
+    "relevant_doc_id": "MRPL-INSP-2026-09",
+    "relevant_clause": "CML-07",
+    "is_relevant": true,
+    "query_type": "inspection_finding"
+  },
+  {
+    "query": "Non-conformance report NCR-MRPL-2026-088 localized thinning",
+    "relevant_doc_id": "MRPL-INSP-2026-09",
+    "relevant_clause": "Observed Defects",
+    "is_relevant": true,
+    "query_type": "ncr_lookup"
+  },
+  {
+    "query": "मंगलोर रिफाइनरी निरीक्षण रिपोर्ट कॉलम C-101 (MRPL inspection report)",
+    "relevant_doc_id": "MRPL-INSP-2026-09",
+    "relevant_clause": "Header",
+    "is_relevant": true,
+    "query_type": "bilingual_hindi"
+  },
+  {
+    "query": "Joint efficiency table for class 1 vessels per IS 2825",
+    "relevant_doc_id": "IS-2825",
+    "relevant_clause": "4.2",
+    "is_relevant": true,
+    "query_type": "indian_standard"
+  },
+  {
+    "query": "IS 2825 Clause 4.2 weld joint efficiency factor",
+    "relevant_doc_id": "IS-2825",
+    "relevant_clause": "4.2",
+    "is_relevant": true,
+    "query_type": "exact_clause"
+  },
+  {
+    "query": "What is the capital expenditure budget for refinery expansion in 2030?",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_out_of_domain"
+  },
+  {
+    "query": "ASME Section IX welding procedure qualification WPS for titanium cladding",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_missing_standard"
+  },
+  {
+    "query": "External pressure design of vacuum vessels per ASME UG-28",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_close_clause"
+  },
+  {
+    "query": "API 650 storage tank bottom plate settlement criteria",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_different_api"
+  },
+  {
+    "query": "Maintenance procedure for pump P-402 mechanical seal flush plan 53B",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_missing_tag"
+  },
+  {
+    "query": "PI-108 pressure indicator calibration certificate and range",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_missing_equipment"
+  },
+  {
+    "query": "Transformer oil breakdown voltage test per IS 335",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_electrical"
+  },
+  {
+    "query": "Cooling tower drift loss calculation methodology",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_utilities"
+  },
+  {
+    "query": "Employee medical insurance reimbursement policy PSU guidelines",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_hr_policy"
+  },
+  {
+    "query": "Corporate social responsibility CSR grant allocation 2026",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_corporate"
+  },
+  {
+    "query": "Flare stack tip replacement rigging plan and crane selection",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_rigging"
+  },
+  {
+    "query": "Boiler steam drum water level controller LIC-301 tuning parameters",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_missing_tag"
+  },
+  {
+    "query": "Diesel hydrotreating unit reactor R-201 catalyst loading SOP",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_process"
+  },
+  {
+    "query": "API 510 pressure vessel inspector certification syllabus",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_certification"
+  },
+  {
+    "query": "Pipeline pigging frequency for multi-product pipeline 14 inch",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_pipeline"
+  },
+  {
+    "query": "Environmental emission standard for SO2 in refinery furnace stack",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_environmental"
+  },
+  {
+    "query": "Chemical injection rate for corrosion inhibitor in overhead condenser",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_chemical"
+  },
+  {
+    "query": "Substation 33kV gas insulated switchgear GIS inspection protocol",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_electrical"
+  },
+  {
+    "query": "Security access control for air-gapped supervisory workstation",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_it_security"
+  },
+  {
+    "query": "Crude oil distillation fractionation equilibrium tray efficiency model",
+    "relevant_doc_id": "NONE",
+    "relevant_clause": "NONE",
+    "is_relevant": false,
+    "query_type": "hard_negative_simulation"
+  }
+]

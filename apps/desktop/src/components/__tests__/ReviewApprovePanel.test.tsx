@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ReviewApprovePanel } from "../ReviewApprovePanel";
 
 describe("ReviewApprovePanel Component", () => {
@@ -14,6 +14,15 @@ describe("ReviewApprovePanel Component", () => {
     name: "P. V. Kulkarni",
     designation: "Chief Manager - Mechanical",
   };
+
+  beforeEach(() => {
+    delete (window as any).__TAURI_INTERNALS__;
+  });
+
+  afterEach(() => {
+    delete (window as any).__TAURI_INTERNALS__;
+    vi.restoreAllMocks();
+  });
 
   it("renders deliverable preview on white page in light mode with org letterhead", () => {
     render(
@@ -262,5 +271,68 @@ describe("ReviewApprovePanel Component", () => {
 
     expect(screen.getByText(/APPROVED & SIGNED/)).toBeDefined();
     expect(screen.getByText(/This deliverable was approved by P. V. Kulkarni/)).toBeDefined();
+  });
+
+  it("shows persistent error banner and preserves unapproved state when core RPC rejects", async () => {
+    (window as any).__TAURI_INTERNALS__ = {};
+    const mockInvoke = vi.fn().mockResolvedValue({
+      error: "SeparationOfDutiesError: Approver cannot be the preparing user.",
+    });
+
+    vi.doMock("@tauri-apps/api/core", () => ({
+      invoke: mockInvoke,
+    }));
+
+    const verifiedFields = [
+      {
+        id: "f1",
+        field_name: "t_actual",
+        value: "8.2",
+        unit: "mm",
+        confidence: 0.98,
+        is_verified: true,
+        requires_verification: false,
+        page: 1,
+        imagePath: "scan.pdf",
+      },
+    ];
+
+    const citations = [
+      {
+        id: "c1",
+        doc_id: "KB-API-570",
+        title: "Piping Code",
+        clause_or_section: "7.1.2",
+        claim_text: "Formula adheres to standard",
+        is_cited: true,
+      },
+    ];
+
+    render(
+      <ReviewApprovePanel
+        deliverableId="DELIV-TEST-101"
+        title="TECHNICAL APPROVAL NOTE"
+        subject="Column C-101"
+        maker={mockMaker}
+        checker={mockChecker}
+        currentUser={mockChecker}
+        initialFields={verifiedFields}
+        initialCitations={citations}
+        initialStatus="PENDING_CHECK"
+      />
+    );
+
+    const approveBtn = screen.getByTestId("approve-btn") as HTMLButtonElement;
+    expect(approveBtn.disabled).toBe(false);
+
+    fireEvent.click(approveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("rpc-error-banner")).toBeDefined();
+      expect(screen.getByText(/SeparationOfDutiesError/)).toBeDefined();
+    });
+
+    // Approval stamp must NOT be displayed because core refused!
+    expect(screen.queryByTestId("approval-stamp-box")).toBeNull();
   });
 });

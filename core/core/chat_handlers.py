@@ -13,6 +13,8 @@ from agent.budget import RunBudget, RunBudgetTracker
 from agent.planner import PlanStep, Planner
 from agent.policy import PolicyDecision, PolicyEngine
 from agent.turn_loop import TurnLoop
+from core.attachment_loader import process_chat_attachments
+from core.pre_retrieval import maybe_execute_preretrieval
 from models.ollama import OllamaClient
 from models.registry import ModelRegistry
 from models.router import ModelRouter
@@ -108,7 +110,12 @@ class ChatManager:
             )
         ]
 
-        decision = self.router.route(prompt=user_prompt, has_image=has_image, mime_types=mimes or None, installed_tags=installed)
+        decision = await self.router.route(
+            prompt=user_prompt,
+            has_image=has_image,
+            mime_types=mimes or None,
+            installed_tags=installed,
+        )
         model_tag, task_class = decision.selected_model_tag, decision.task_class
         self.log_stderr(f"Routed '{task_class}' to model '{model_tag}' (conf={decision.confidence:.2f})")
 
@@ -123,51 +130,21 @@ class ChatManager:
         })
 
         # Extract and append attachment context and base64 images into messages
-        if attachments:
-            attachment_contexts: list[str] = []
-            attached_images: list[str] = []
-            for att in attachments:
-                if not isinstance(att, dict):
-                    continue
-                att_name = att.get("name") or att.get("filename") or "Attachment"
-                att_path = att.get("path")
-                att_content = att.get("content")
-                if att_path:
-                    p = Path(att_path)
-                    if p.exists() and p.is_file():
-                        suf = p.suffix.lower()
-                        if suf in IMAGE_EXTENSIONS:
-                            try:
-                                b64 = base64.b64encode(p.read_bytes()).decode("utf-8")
-                                attached_images.append(b64)
-                                attachment_contexts.append(f"### Attached Image: {att_name} ({p.name})")
-                            except Exception as e:
-                                attachment_contexts.append(f"### Attached Image: {att_name} (Failed to load: {e})")
-                        else:
-                            try:
-                                doc_md = convert_document_to_markdown(p)
-                                clean_md = doc_md.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                                attachment_contexts.append(f"### Document: {att_name} ({p.name})\n\n{clean_md[:32000]}")
-                            except Exception as e:
-                                attachment_contexts.append(f"### Document: {att_name} (Failed to read: {e})")
-                elif att_content:
-                    clean_att = str(att_content).encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                    attachment_contexts.append(f"### Document: {att_name}\n```\n{clean_att[:24000]}\n```")
+        process_chat_attachments(attachments, messages, user_prompt)
 
-            if attachment_contexts or attached_images:
-                combined_context = (
-                    "The user has provided the following attached context:\n\n" + "\n\n".join(attachment_contexts)
-                ) if attachment_contexts else ""
-                if messages and messages[-1].get("role") == "user":
-                    if combined_context:
-                        messages[-1]["content"] = f"{combined_context}\n\n---\nUser Query: {messages[-1].get('content', '')}"
-                    if attached_images:
-                        messages[-1]["images"] = attached_images
-                else:
-                    msg_obj: dict[str, Any] = {"role": "user", "content": combined_context or user_prompt}
-                    if attached_images:
-                        msg_obj["images"] = attached_images
-                    messages.append(msg_obj)
+        # Conditional Pre-Retrieval gated strictly on task_class (reusing prompt embedding)
+        await maybe_execute_preretrieval(
+            task_class=task_class,
+            user_prompt=user_prompt,
+            user_role=str(params.get("userRole") or "InspectionEngineer"),
+            num_ctx=self.model_registry.get_num_ctx(model_tag),
+            model_registry=self.model_registry,
+            session_store=store,
+            session_id=session_id,
+            messages=messages,
+            send_notification_fn=self.send_notification,
+            query_vector=decision.prompt_embedding,
+        )
 
         if session_id:
             try:

@@ -74,8 +74,8 @@ class PolicyEngine:
                                 return PolicyDecision.AUTO, pattern
                             elif choice == "deny":
                                 return PolicyDecision.DENY, pattern
-            except Exception:
-                pass
+            except Exception as exc:
+                log.warning("policy_lookup_failed", project_id=project_id, error=str(exc))
 
         # Default fallback for write/exec without explicit allow rule is ASK
         return PolicyDecision.ASK, None

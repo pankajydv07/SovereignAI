@@ -6,7 +6,7 @@ export interface InlineCropPreviewProps {
   fieldName: string;
   value: string;
   unit?: string;
-  confidence: number;
+  confidence: number | null;
   page: number;
   bbox?: [number, number, number, number]; // [ymin, xmin, ymax, xmax] normalized 0-1000
   imagePath: string;
@@ -61,8 +61,12 @@ export const InlineCropPreview: React.FC<InlineCropPreviewProps> = ({
         </div>
         <div>
           <span className="text-[#9AA7B4]">Extraction Confidence: </span>
-          <span className={`font-semibold ${confidence < 0.8 ? "text-[#F59E0B]" : "text-[#10B981]"}`}>
-            {confidence.toFixed(2)}
+          <span
+            className={`font-semibold ${
+              confidence === null || confidence < 0.8 ? "text-[#F59E0B]" : "text-[#10B981]"
+            }`}
+          >
+            {confidence !== null ? confidence.toFixed(2) : "Uncalibrated (Vision)"}
           </span>
         </div>
       </div>

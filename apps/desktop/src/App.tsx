@@ -83,6 +83,28 @@ export const App: React.FC = () => {
         const recent = await invoke<ProjectInfo[]>("get_recent_projects");
         dispatchProj({ type: "SET_PROJECTS", payload: recent });
 
+        if (recent && recent.length > 0) {
+          const firstProj = recent[0];
+          dispatchProj({ type: "SET_ACTIVE_PROJECT", id: firstProj.id });
+          setLeftRailTab("sessions");
+          dispatchSess({ type: "SET_LOADING", stage: "fetching session list...", elapsedMs: 50 });
+          try {
+            const res = await invoke<any>("invoke_core_rpc", {
+              method: "session/list",
+              params: { projectId: firstProj.id, projectPath: firstProj.path },
+            });
+            dispatchSess({ type: "SET_SESSIONS", payload: res.sessions || [] });
+          } catch {
+            dispatchSess({
+              type: "SET_DEGRADED",
+              message: "Agent core unavailable — projects can be opened, sessions unavailable.",
+              remedyLabel: "Retry Core",
+            });
+          }
+        } else {
+          dispatchSess({ type: "SET_SESSIONS", payload: [] });
+        }
+
         unlistenFn = await listen<CoreState>("core-status-changed", (event) => {
           setCoreState(event.payload);
           if (event.payload.type === "failed" || event.payload.type === "restarting") {

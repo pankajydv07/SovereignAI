@@ -4,6 +4,7 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
+from docx import Document
 import openpyxl
 import pytest
 
@@ -69,6 +70,13 @@ def test_citation_enforcement_missing_citations() -> None:
 
 def test_docx_approval_note_rendering(temp_dir: Path, sample_citation: CitationRef) -> None:
     """Test DOCX Approval Note rendering and provenance footer presence."""
+    tpl_dir = temp_dir / ".swaraj" / "templates"
+    tpl_dir.mkdir(parents=True, exist_ok=True)
+    tpl_file = tpl_dir / "approval_note.docx"
+    doc = Document()
+    doc.add_heading("{{ subject }}", level=1)
+    doc.save(str(tpl_file))
+
     data = {
         "subject": "Overhaul of High Pressure Boiler B-201",
         "reference": ["FILE/B-201/2026/01"],
@@ -93,7 +101,8 @@ def test_docx_approval_note_rendering(temp_dir: Path, sample_citation: CitationR
         ],
     }
 
-    engine = DeliverableRenderEngine()
+    tm = TemplateManager(workspace_root=temp_dir)
+    engine = DeliverableRenderEngine(template_manager=tm)
     out_file = temp_dir / "approval_note.docx"
 
     res_path = engine.render(
@@ -314,11 +323,18 @@ def test_template_manager_and_sandbox_env(temp_dir: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_render_deliverable_tool_execution(
-    temp_dir: Path, sample_citation: CitationRef
-) -> None:
+async def test_render_deliverable_tool_execution(temp_dir: Path, sample_citation: CitationRef) -> None:
     """Test RenderDeliverableTool execution and error reporting for repair path."""
-    tool = RenderDeliverableTool()
+    tpl_dir = temp_dir / ".swaraj" / "templates"
+    tpl_dir.mkdir(parents=True, exist_ok=True)
+    tpl_file = tpl_dir / "approval_note.docx"
+    doc = Document()
+    doc.add_heading("{{ subject }}", level=1)
+    doc.save(str(tpl_file))
+
+    tm = TemplateManager(workspace_root=temp_dir)
+    engine = DeliverableRenderEngine(template_manager=tm)
+    tool = RenderDeliverableTool(engine=engine)
     ctx = ToolContext(workspace_root=temp_dir, session_id="test_session_55")
 
     valid_input = RenderDeliverableInput(

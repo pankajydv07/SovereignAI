@@ -1,10 +1,22 @@
 """Data models and type definitions for Knowledge Base hybrid retrieval."""
 
 from enum import StrEnum
-
 from pydantic import BaseModel, Field
-
 from ingest.types import BoundingBox
+
+
+class EmbeddingDimensionMismatchError(ValueError):
+    """Raised when query or chunk vector dimension does not match active embedder model dimension."""
+
+    def __init__(self, expected_dim: int, actual_dim: int, model: str = "") -> None:
+        msg = (
+            f"Embedding vector dimension mismatch: expected {expected_dim}-d for active model '{model}', "
+            f"found {actual_dim}-d in database. Re-indexing of the knowledge base is required."
+        )
+        super().__init__(msg)
+        self.expected_dim = expected_dim
+        self.actual_dim = actual_dim
+        self.model = model
 
 
 class ClassificationLevel(StrEnum):
@@ -61,6 +73,9 @@ class KBDocument(BaseModel):
     id: str
     title: str
     dept: str
+    revision: str = Field(default="rev.01")
+    content_hash: str = Field(default="", alias="contentHash")
+    status: str = Field(default="COMPLETED")  # COMPLETED vs INCOMPLETE
     classification: ClassificationLevel
     effective_date: str = Field(alias="effectiveDate")
     superseded_by: str | None = Field(default=None, alias="supersededBy")
@@ -78,4 +93,5 @@ class SearchResult(BaseModel):
     bbox: BoundingBox
     rrf_score: float = Field(alias="rrfScore")
     cosine_similarity: float = Field(alias="cosineSimilarity")
+    bm25_rank: int | None = Field(default=None, alias="bm25Rank")
     citation: Citation

@@ -7,6 +7,7 @@ from pydantic import Field, ValidationError
 from protocol.models import ProtocolBaseModel
 from renderers.schemas import UncitedClaimError
 from tools.base import BaseTool, SideEffect, ToolContext, ToolKind, ToolResult
+from tools.workspace import WorkspaceAccessError, verify_workspace_path
 
 
 class RenderDeliverableInput(ProtocolBaseModel):
@@ -62,7 +63,11 @@ class RenderDeliverableTool(BaseTool[RenderDeliverableInput, RenderDeliverableOu
 
     async def run(self, args: RenderDeliverableInput, ctx: ToolContext) -> ToolResult:
         run_id = f"render_{ctx.session_id}"
-        out_path = ctx.workspace_root / args.output_filename
+
+        try:
+            out_path = verify_workspace_path(args.output_filename, ctx.workspace_root)
+        except WorkspaceAccessError as exc:
+            return ToolResult.failed(str(exc))
 
         try:
             rendered_file = self.engine.render(

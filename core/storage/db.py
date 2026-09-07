@@ -7,7 +7,7 @@ from pathlib import Path
 
 import aiosqlite
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 CREATE_TABLES_SQL = """
 PRAGMA journal_mode = WAL;
@@ -110,6 +110,9 @@ CREATE TABLE IF NOT EXISTS kb_documents (
     dept TEXT NOT NULL,
     classification TEXT NOT NULL,
     effective_date TEXT NOT NULL,
+    revision TEXT NOT NULL DEFAULT 'rev.01',
+    content_hash TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'COMPLETED',
     superseded_by TEXT,
     created_at_ms INTEGER NOT NULL
 );
@@ -144,6 +147,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS kb_chunks_fts USING fts5(
 CREATE TABLE IF NOT EXISTS kb_vectors (
     chunk_id TEXT PRIMARY KEY,
     embedding_json TEXT NOT NULL,
+    embedding_model TEXT NOT NULL DEFAULT '',
+    dimension INTEGER NOT NULL DEFAULT 768,
     FOREIGN KEY(chunk_id) REFERENCES kb_chunks(id) ON DELETE CASCADE
 );
 
@@ -266,6 +271,27 @@ class DatabaseManager:
 
         if current_version < SCHEMA_VERSION:
             await conn.executescript(CREATE_TABLES_SQL)
+            # Safe migration: ensure existing tables have newer columns
+            try:
+                async with conn.execute("PRAGMA table_info(kb_vectors);") as cursor:
+                    cols = [r[1] for r in await cursor.fetchall()]
+                    if "dimension" not in cols and len(cols) > 0:
+                        await conn.execute("ALTER TABLE kb_vectors ADD COLUMN dimension INTEGER NOT NULL DEFAULT 768;")
+                    if "embedding_model" not in cols and len(cols) > 0:
+                        await conn.execute("ALTER TABLE kb_vectors ADD COLUMN embedding_model TEXT NOT NULL DEFAULT '';")
+                async with conn.execute("PRAGMA table_info(kb_documents);") as cursor:
+                    cols = [r[1] for r in await cursor.fetchall()]
+                    if len(cols) > 0:
+                        if "status" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN status TEXT NOT NULL DEFAULT 'COMPLETED';")
+                        if "revision" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN revision TEXT NOT NULL DEFAULT 'rev.01';")
+                        if "content_hash" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN content_hash TEXT NOT NULL DEFAULT '';")
+                        if "superseded_by" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN superseded_by TEXT;")
+            except Exception:  # allowed-silent
+                pass
             await conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION};")
             await conn.commit()
 

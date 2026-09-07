@@ -60,3 +60,7 @@ When streaming with tools, accumulate `thinking`, `content` **and** `tool_calls`
 ## Residency
 
 `keep_alive` per request is the residency manager: hot role → `30m`, one-shot classification → `0`. Surface model loading in the UI with a named stage and elapsed time — never a bare spinner.
+
+## Invariant 8: Fallback-Superset Invariant
+
+The low-confidence fallback task class (`other` / `planner`) MUST hold a superset of general capabilities (e.g. `fs_read`, `fs_list`, `glob`, `fs_write`, `generate_document`). When a prompt is ambiguous or novel and falls below the confidence margin threshold, routing to `planner` must never starve the agent of general execution tools. However, specialized drafting tools (`render_deliverable`) remain strictly isolated to `official_drafting` to prevent synonymous tool selection degradation on 30B models.

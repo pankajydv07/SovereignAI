@@ -118,8 +118,11 @@ class TurnLoop:
             "You have direct access to tools to inspect and operate on workspace files:\n"
             "- Use `glob` or `fs_list` to search and find files in the workspace.\n"
             "- Use `fs_read` to read any workspace file (it automatically converts Excel .xlsx/.csv spreadsheets, Word .docx, PPT .pptx, and PDF documents into clean Markdown tables and text).\n"
-            "- Use `fs_write` to save output files.\n"
-            "CRITICAL: Never state or claim that you cannot open, view, or read binary files, Excel workbooks, or workspace files. When asked about any file or spreadsheet in the workspace, immediately invoke `glob` or `fs_read` to inspect it."
+            "- Use `fs_write` to save output text files.\n"
+            "- Use `generate_document` to create and generate `.pdf`, `.docx`, `.xlsx`, and `.md` files directly in the workspace. Whenever the user asks to generate, create, or export a report, summary, document, or PDF, invoke `generate_document` (or `render_deliverable` for official PSU approval notes/memorandums) with `outputFormat` and `outputFilename`. Do not write the generating code in your chat reply.\n"
+            "CRITICAL:\n"
+            "1. Never state or claim that you cannot open, view, or read binary files, Excel workbooks, or workspace files. Immediately invoke `glob` or `fs_read`.\n"
+            "2. Never state or claim that you cannot generate or produce PDF deliverables or documents directly from the workspace. Always call `generate_document` with `outputFormat='pdf'` (or `'docx'`) to create the file directly."
         )
 
         def get_ollama_messages() -> list[dict[str, Any]]:

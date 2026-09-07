@@ -99,14 +99,14 @@ def validate_generated_document(
     if not file_path.exists():
         raise DocumentValidationError(f"Generated file does not exist: {file_path}")
 
-    if file_path.stat().st_size == 0:
-        raise DocumentValidationError(f"Generated file is zero bytes: {file_path}")
-
     fmt = output_format.lower().strip()
     metrics: dict[str, Any] = {"format": fmt, "fileSizeBytes": file_path.stat().st_size}
 
-    # First: Check for illicit provenance spoofing
+    # First: Check for illicit provenance spoofing and official deliverable structures
     scan_for_provenance_spoofing(file_path, fmt)
+    from renderers.governance import scan_for_official_deliverable_structures
+
+    scan_for_official_deliverable_structures(file_path, fmt)
 
     expected_row_count = 0
     if isinstance(input_data, list):

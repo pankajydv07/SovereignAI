@@ -2,9 +2,12 @@
 
 import asyncio
 from pathlib import Path
+from unittest.mock import patch
 import pytest
+from PIL import Image
 from ingest.classifier import classify_document
 from ingest.extractor import FieldExtractor
+from ingest.ocr import OcrEngineUnavailable, extract_words_tesseract
 from ingest.pipeline import DocumentIngestPipeline
 from ingest.preprocess import adaptive_binarise, cv2_to_pil, deskew_image, pil_to_cv2
 from ingest.types import BoundingBox, DocumentClassification, ExtractedWord
@@ -39,8 +42,6 @@ def test_classification_scanned_image(corpus_dir: Path) -> None:
 
 def test_opencv_preprocessing(corpus_dir: Path) -> None:
     """Test OpenCV deskewing and adaptive binarization."""
-    from PIL import Image
-
     img_path = corpus_dir / "report_skewed.png"
     pil_img = Image.open(img_path)
     cv_img = pil_to_cv2(pil_img)
@@ -93,22 +94,33 @@ def test_vision_field_uncalibrated_confidence() -> None:
     assert field.extractor == "vision_llm"
 
 
+def test_missing_tesseract_raises_explicit_error() -> None:
+    """Test that missing Tesseract OCR executable raises OcrEngineUnavailable with installation advice."""
+    dummy_img = Image.new("RGB", (100, 100), color="white")
+    with patch("pytesseract.image_to_data", side_effect=FileNotFoundError("tesseract not found")):
+        with pytest.raises(OcrEngineUnavailable) as exc_info:
+            extract_words_tesseract(dummy_img, page_num=1)
+
+        err_msg = str(exc_info.value)
+        assert "Tesseract OCR executable" in err_msg
+        assert "winget install" in err_msg or "apt install" in err_msg
+
+
 @pytest.mark.asyncio
 async def test_pipeline_end_to_end_synthetic_report(corpus_dir: Path) -> None:
     """Test async DocumentIngestPipeline execution on synthetic test report."""
     pipeline = DocumentIngestPipeline(max_workers=2)
     try:
         report_path = corpus_dir / "report_clean.png"
-        result = await pipeline.ingest_document(report_path)
-
-        assert result.classification == DocumentClassification.SCANNED
-        assert len(result.pages) == 1
-        page = result.pages[0]
-        assert len(page.regions) > 0
-
-        # Check extracted fields if OCR engine runs
-        field_names = [f.field_name for f in result.fields]
-        assert isinstance(field_names, list)
+        try:
+            result = await pipeline.ingest_document(report_path)
+            assert result.classification == DocumentClassification.SCANNED
+            assert len(result.pages) == 1
+            page = result.pages[0]
+            assert len(page.regions) > 0
+        except OcrEngineUnavailable as oeu:
+            # If tesseract is not installed on test runner, it must fail with OcrEngineUnavailable
+            assert "Tesseract OCR executable" in str(oeu)
 
     finally:
         pipeline.shutdown()

@@ -154,14 +154,18 @@ const SingleTerminal: React.FC<SingleTerminalProps> = ({ tab, isActive, onExit }
 
       if (isTauri) {
         import("@tauri-apps/api/core").then(({ invoke }) => {
-          invoke("close_pty", { id: tab.id }).catch(() => {});
+          invoke("close_pty", { id: tab.id }).catch((err) => {
+            console.debug("close_pty error:", err);
+          });
         });
       }
 
       if (webglAddonRef.current) {
         try {
           webglAddonRef.current.dispose();
-        } catch {}
+        } catch (err) {
+          console.debug("webgl dispose error:", err);
+        }
       }
       term.dispose();
     };

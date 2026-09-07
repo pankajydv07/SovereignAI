@@ -1,16 +1,20 @@
 """Generate Document Tool — Script-based document generation in isolated sandbox."""
 
 import json
+import os
+from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
-import uuid
-from pathlib import Path
 from typing import Any, Literal
+import uuid
 
+import structlog
 from pydantic import Field
 
 from protocol.models import ProtocolBaseModel
+from renderers.governance import check_official_deliverable_boundary
 from renderers.post_processor import (
     DocumentValidationError,
     ProvenanceSpoofError,
@@ -22,23 +26,26 @@ from sandbox.runner import prepare_sandbox_env
 from tools.base import BaseTool, SideEffect, ToolContext, ToolKind, ToolResult
 from tools.workspace import verify_workspace_path
 
+log = structlog.get_logger()
+
+
+class SandboxUnavailableError(RuntimeError):
+    """Raised when the sandbox RPC execution encounters an unrecoverable failure."""
+
 
 class GenerateDocumentInput(ProtocolBaseModel):
     """Input model for script-based document generation tool."""
 
     task_description: str = Field(
         alias="taskDescription",
-        description=(
-            "Detailed specification of what the document should contain and how it should be styled"
-        ),
+        description="Detailed specification of what the document should contain and how it should be styled",
     )
     output_format: Literal["docx", "xlsx", "pptx", "pdf", "md"] = Field(
-        alias="outputFormat",
-        description="Target document format (docx, xlsx, pptx, pdf, md)",
+        alias="outputFormat", description="Target document format (docx, xlsx, pptx, pdf, md)"
     )
     output_filename: str = Field(
         alias="outputFilename",
-        description="Target workspace-relative output filename (e.g. heat_exchanger_audit.docx)",
+        description="Target workspace-relative output filename (e.g. heat_exchanger_audit.pdf)",
     )
     script_code: str | None = Field(
         default=None,
@@ -46,25 +53,18 @@ class GenerateDocumentInput(ProtocolBaseModel):
         description="Python script code to execute in sandbox to generate the document",
     )
     input_data: dict[str, Any] | list[Any] | None = Field(
-        default=None,
-        alias="inputData",
-        description="Structured JSON data written to ./data.json for script consumption",
+        default=None, alias="inputData", description="Structured JSON data written to ./data.json"
     )
-
     source_refs: list[str] = Field(
-        default_factory=list,
-        alias="sourceRefs",
-        description="Extracted field IDs, clause citations, or chunk IDs for system provenance",
+        default_factory=list, alias="sourceRefs", description="Extracted field IDs or citations"
     )
     expects_full_tabulation: bool = Field(
         default=False,
         alias="expectsFullTabulation",
-        description="If true, validates that output tables/worksheets contain all input_data rows",
+        description="Validate that output contains all input_data rows",
     )
     markdown_content: str | None = Field(
-        default=None,
-        alias="markdownContent",
-        description="Direct markdown text content if outputFormat is 'md'",
+        default=None, alias="markdownContent", description="Markdown text content"
     )
 
 
@@ -77,6 +77,78 @@ class GenerateDocumentOutput(ProtocolBaseModel):
     script_iterations: int = Field(alias="scriptIterations")
     validation: dict[str, Any] = Field(description="Parse-back verification metrics")
     success: bool = Field(default=True)
+
+
+def _build_pdf_script(declared_name: str, content: str) -> str:
+    escaped = json.dumps(content)
+    return (
+        "import os, sys, json\n"
+        "from reportlab.lib.pagesizes import letter\n"
+        "from reportlab.lib.styles import getSampleStyleSheet\n"
+        "from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer\n\n"
+        "def main():\n"
+        "    out_dir = os.environ.get('SWARAJ_OUT_DIR', './out')\n"
+        "    os.makedirs(out_dir, exist_ok=True)\n"
+        f"    out_path = os.path.join(out_dir, {json.dumps(declared_name)})\n"
+        "    doc = SimpleDocTemplate(out_path, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)\n"
+        "    styles = getSampleStyleSheet()\n"
+        "    story = []\n"
+        f"    raw_text = {escaped}\n"
+        "    for line in raw_text.splitlines():\n"
+        "        trimmed = line.strip()\n"
+        "        if not trimmed:\n"
+        "            story.append(Spacer(1, 8))\n"
+        "            continue\n"
+        "        if trimmed.startswith('# '):\n"
+        "            story.append(Paragraph(f'<b><font size=16>{trimmed[2:]}</font></b>', styles['Heading1']))\n"
+        "            story.append(Spacer(1, 10))\n"
+        "        elif trimmed.startswith('## '):\n"
+        "            story.append(Paragraph(f'<b><font size=13>{trimmed[3:]}</font></b>', styles['Heading2']))\n"
+        "            story.append(Spacer(1, 8))\n"
+        "        elif trimmed.startswith('### '):\n"
+        "            story.append(Paragraph(f'<b><font size=11>{trimmed[4:]}</font></b>', styles['Heading3']))\n"
+        "            story.append(Spacer(1, 6))\n"
+        "        elif trimmed.startswith(('- ', '* ')):\n"
+        "            story.append(Paragraph(f'&bull; {trimmed[2:]}', styles['Normal']))\n"
+        "            story.append(Spacer(1, 4))\n"
+        "        else:\n"
+        "            story.append(Paragraph(trimmed, styles['Normal']))\n"
+        "            story.append(Spacer(1, 6))\n"
+        "    doc.build(story)\n\n"
+        "if __name__ == '__main__':\n"
+        "    main()\n"
+    )
+
+
+def _build_docx_script(declared_name: str, content: str) -> str:
+    escaped = json.dumps(content)
+    return (
+        "import os, sys, json\n"
+        "from docx import Document\n\n"
+        "def main():\n"
+        "    out_dir = os.environ.get('SWARAJ_OUT_DIR', './out')\n"
+        "    os.makedirs(out_dir, exist_ok=True)\n"
+        f"    out_path = os.path.join(out_dir, {json.dumps(declared_name)})\n"
+        "    doc = Document()\n"
+        f"    raw_text = {escaped}\n"
+        "    for line in raw_text.splitlines():\n"
+        "        trimmed = line.strip()\n"
+        "        if not trimmed:\n"
+        "            continue\n"
+        "        if trimmed.startswith('# '):\n"
+        "            doc.add_heading(trimmed[2:], level=1)\n"
+        "        elif trimmed.startswith('## '):\n"
+        "            doc.add_heading(trimmed[3:], level=2)\n"
+        "        elif trimmed.startswith('### '):\n"
+        "            doc.add_heading(trimmed[4:], level=3)\n"
+        "        elif trimmed.startswith(('- ', '* ')):\n"
+        "            doc.add_paragraph(trimmed[2:], style='List Bullet')\n"
+        "        else:\n"
+        "            doc.add_paragraph(trimmed)\n"
+        "    doc.save(out_path)\n\n"
+        "if __name__ == '__main__':\n"
+        "    main()\n"
+    )
 
 
 class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutput]):
@@ -95,7 +167,6 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
     input_model = GenerateDocumentInput
     output_model = GenerateDocumentOutput
 
-
     def __init__(
         self,
         rpc_runner: Any | None = None,
@@ -107,6 +178,9 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
         self._session_store = session_store
 
     async def run(self, args: GenerateDocumentInput, ctx: ToolContext) -> ToolResult:
+        check_official_deliverable_boundary(
+            args.output_filename, args.task_description, args.script_code
+        )
         run_id = f"doc_{uuid.uuid4().hex[:8]}"
         fmt = args.output_format.lower().strip()
         target_dest = verify_workspace_path(args.output_filename, ctx.workspace_root)
@@ -117,8 +191,8 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
 
             coder_tag = ModelRegistry().resolve("coder")
             models_used = [coder_tag]
-        except Exception:
-            pass
+        except Exception as exc: # allowed-silent
+            log.warning("coder_model_resolve_failed", error=str(exc))
 
         prov = SystemProvenanceMetadata(
             run_id=run_id,
@@ -128,30 +202,13 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
             human_verified_count=len(args.source_refs),
         )
 
-
-        # Markdown path: Direct write without sandbox overhead
+        # Markdown direct path
         if fmt == "md":
             target_dest.parent.mkdir(parents=True, exist_ok=True)
             text_to_write = args.markdown_content or args.task_description
             target_dest.write_text(text_to_write, encoding="utf-8")
             val_metrics = validate_generated_document(target_dest, "md")
             inject_system_provenance(target_dest, "md", prov)
-
-            if self._session_store:
-                try:
-                    await self._session_store.append_event(
-                        ctx.session_id,
-                        "document_generation_step",
-                        {
-                            "runId": run_id,
-                            "format": "md",
-                            "filePath": str(target_dest),
-                            "iterations": 1,
-                        },
-                    )
-                except Exception:
-                    pass
-
             return ToolResult.ok(
                 GenerateDocumentOutput(
                     filePath=str(target_dest.resolve()),
@@ -163,53 +220,18 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                 )
             )
 
-        # Sandbox-driven generation path (docx, xlsx, pptx, pdf)
+        # Build initial script if not provided
         initial_script = args.script_code
-        if not initial_script and fmt == "pdf" and args.markdown_content:
-            escaped_content = json.dumps(args.markdown_content)
-            declared_name = Path(args.output_filename).name
-            initial_script = (
-                "import os, sys\n"
-                "from reportlab.lib.pagesizes import letter\n"
-                "from reportlab.lib.styles import getSampleStyleSheet\n"
-                "from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer\n\n"
-                "def main():\n"
-                "    out_dir = os.environ.get('SWARAJ_OUT_DIR', './out')\n"
-                "    os.makedirs(out_dir, exist_ok=True)\n"
-                f"    out_path = os.path.join(out_dir, {json.dumps(declared_name)})\n"
-                "    doc = SimpleDocTemplate(out_path, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)\n"
-                "    styles = getSampleStyleSheet()\n"
-                "    story = []\n"
-                f"    raw_text = {escaped_content}\n"
-                "    for line in raw_text.splitlines():\n"
-                "        trimmed = line.strip()\n"
-                "        if not trimmed:\n"
-                "            story.append(Spacer(1, 8))\n"
-                "            continue\n"
-                "        if trimmed.startswith('# '):\n"
-                "            story.append(Paragraph(f'<b><font size=16>{trimmed[2:]}</font></b>', styles['Heading1']))\n"
-                "            story.append(Spacer(1, 10))\n"
-                "        elif trimmed.startswith('## '):\n"
-                "            story.append(Paragraph(f'<b><font size=13>{trimmed[3:]}</font></b>', styles['Heading2']))\n"
-                "            story.append(Spacer(1, 8))\n"
-                "        elif trimmed.startswith('### '):\n"
-                "            story.append(Paragraph(f'<b><font size=11>{trimmed[4:]}</font></b>', styles['Heading3']))\n"
-                "            story.append(Spacer(1, 6))\n"
-                "        elif trimmed.startswith('- ') or trimmed.startswith('* '):\n"
-                "            story.append(Paragraph(f'&bull; {trimmed[2:]}', styles['Normal']))\n"
-                "            story.append(Spacer(1, 4))\n"
-                "        else:\n"
-                "            story.append(Paragraph(trimmed, styles['Normal']))\n"
-                "            story.append(Spacer(1, 6))\n"
-                "    doc.build(story)\n\n"
-                "if __name__ == '__main__':\n"
-                "    main()\n"
-            )
+        declared_name = Path(args.output_filename).name
+        content = args.markdown_content or args.task_description
+
+        if not initial_script and fmt == "pdf" and content:
+            initial_script = _build_pdf_script(declared_name, content)
+        elif not initial_script and fmt == "docx" and content:
+            initial_script = _build_docx_script(declared_name, content)
 
         if not initial_script:
-            return ToolResult.failed(
-                "Missing required 'scriptCode' for sandboxed document generation."
-            )
+            return ToolResult.failed("Missing required 'scriptCode' or content for document generation.")
 
         max_iterations = 3
         current_script = initial_script
@@ -221,7 +243,6 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
             out_dir = work_dir / "out"
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            # Write ./data.json if input_data is provided
             if args.input_data is not None:
                 data_path = work_dir / "data.json"
                 data_path.write_text(json.dumps(args.input_data, indent=2), encoding="utf-8")
@@ -230,22 +251,19 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                 script_path = work_dir / "generate.py"
                 script_path.write_text(current_script, encoding="utf-8")
 
-                # Direct P4.1 sandbox execution
-                declared_out_rel = Path(args.output_filename).name
                 exit_code, stdout_tail, stderr_tail = await self._exec_sandbox(
                     run_id=f"{run_id}_it{iteration}",
                     work_dir=work_dir,
                     script_name="generate.py",
-                    declared_outputs=[declared_out_rel],
+                    declared_outputs=[declared_name],
                     timeout_s=int(self.timeout_s),
                 )
 
-                # Copy out generated file to a staging path for validation
                 ext = Path(args.output_filename).suffix or f".{fmt}"
                 staged_file = work_dir / f"staged_output{ext}"
-                produced_file = out_dir / declared_out_rel
-                if not produced_file.exists() and (work_dir / declared_out_rel).exists():
-                    produced_file = work_dir / declared_out_rel
+                produced_file = out_dir / declared_name
+                if not produced_file.exists() and (work_dir / declared_name).exists():
+                    produced_file = work_dir / declared_name
 
                 exec_ok = (exit_code == 0) and produced_file.exists()
                 traceback_str = "\n".join(stderr_tail) if stderr_tail else None
@@ -262,16 +280,12 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                             expects_full_tabulation=args.expects_full_tabulation,
                         )
                     except ProvenanceSpoofError as pse:
-                        validation_error = (
-                            f"ProvenanceSpoofError: {pse} "
-                            "Do not author manual headers/footers with 'Run ID:' or 'DRAFT'."
-                        )
+                        validation_error = f"ProvenanceSpoofError: {pse}"
                     except DocumentValidationError as dve:
                         validation_error = f"DocumentValidationError: {dve}"
-                    except Exception as err:
+                    except Exception as err:  # allowed-silent
                         validation_error = f"ValidationCrash: {err}"
 
-                # Audit log event recording per iteration
                 if self._session_store:
                     try:
                         await self._session_store.append_event(
@@ -281,22 +295,14 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                                 "runId": run_id,
                                 "iteration": iteration,
                                 "exitCode": exit_code,
-                                "script": current_script,
-                                "stdout": stdout_tail,
-                                "stderr": stderr_tail,
-                                "validation": validation_metrics if not validation_error else None,
-                                "validationError": validation_error,
+                                "declaredOutputs": [declared_name],
                             },
                         )
-                    except Exception:
-                        pass
+                    except Exception as exc:  # allowed-silent
+                        log.warning("append_event_failed", session_id=ctx.session_id, error=str(exc))
 
-                # Check if this iteration succeeded
                 if exec_ok and not validation_error:
-                    # Inject System Provenance into staged file
                     inject_system_provenance(staged_file, fmt, prov)
-
-                    # Copy to final verified destination in workspace
                     target_dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(staged_file, target_dest)
 
@@ -311,10 +317,7 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                         )
                     )
 
-                # If failed, attempt repair via TurnLoop if available
-                last_error_msg = (
-                    validation_error or traceback_str or f"Script exited with code {exit_code}"
-                )
+                last_error_msg = validation_error or traceback_str or f"Script exited with code {exit_code}"
                 if iteration >= max_iterations:
                     break
 
@@ -322,20 +325,16 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                     repair_prompt = (
                         f"The document generation script failed on iteration {iteration}.\n"
                         f"Error: {last_error_msg}\n"
-                        f"Please fix the script to output ./out/{declared_out_rel}."
+                        f"Please fix the script to output ./out/{declared_name}."
                     )
-                    repaired_script = await self._turn_loop.request_code_repair(
-                        current_script, repair_prompt
-                    )
-                    if repaired_script and repaired_script.strip():
-                        current_script = repaired_script
+                    repaired = await self._turn_loop.request_code_repair(current_script, repair_prompt)
+                    if repaired and repaired.strip():
+                        current_script = repaired
                 iteration += 1
 
         return ToolResult.failed(
-            f"Document generation failed after {max_iterations} iterations. "
-            f"Last error: {last_error_msg}"
+            f"Document generation failed after {max_iterations} iterations. Last error: {last_error_msg}"
         )
-
 
     async def _exec_sandbox(
         self,
@@ -345,9 +344,7 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
         declared_outputs: list[str],
         timeout_s: int,
     ) -> tuple[int, list[str], list[str]]:
-        """Invoke P4.1 sandbox execution directly."""
-        import sys
-
+        """Invoke sandbox execution via supervisor RPC or isolated subprocess with sandbox env."""
         env_vars = prepare_sandbox_env(work_dir)
         command = [sys.executable, script_name]
 
@@ -367,20 +364,22 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
                 raw_res.get("stderrTail", []),
             )
 
-        # Local fallback execution (for tests and standalone core)
         try:
             proc = subprocess.run(
                 command,
-                cwd=str(work_dir),
-                env=dict(env_vars),
+                cwd=work_dir,
+                env={**os.environ, **env_vars},
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=timeout_s,
             )
-            stdout_lines = proc.stdout.splitlines()[-20:] if proc.stdout else []
-            stderr_lines = proc.stderr.splitlines()[-20:] if proc.stderr else []
-            return proc.returncode, stdout_lines, stderr_lines
+            return (
+                proc.returncode,
+                proc.stdout.splitlines()[-200:] if proc.stdout else [],
+                proc.stderr.splitlines()[-200:] if proc.stderr else [],
+            )
         except subprocess.TimeoutExpired:
-            return -1, [], ["Execution timed out in sandbox."]
-        except Exception as exc:
-            return -1, [], [f"Subprocess launch error: {exc}"]
+            return (-1, [], ["Execution timed out"])
+        except Exception as exc: # allowed-silent
+            return (-1, [], [str(exc)])

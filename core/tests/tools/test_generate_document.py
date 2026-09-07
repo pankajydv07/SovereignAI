@@ -1,5 +1,6 @@
 """Tests for GenerateDocumentTool and format-specific post-processing."""
 
+import subprocess
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -19,6 +20,7 @@ from tools.generate_document import (
     GenerateDocumentInput,
     GenerateDocumentOutput,
     GenerateDocumentTool,
+    SandboxUnavailableError,
 )
 
 
@@ -29,8 +31,55 @@ def test_ctx(tmp_path: Path) -> ToolContext:
     return ToolContext(workspace_root=ws, session_id="sess_test_123")
 
 
+@pytest.fixture
+def test_sandbox_rpc():
+    """Test-double sandbox RPC runner executing code isolated in temporary process."""
+    async def _mock_rpc(method: str, params: dict):
+        if method != "sandbox/exec":
+            return {"exitCode": -1, "stdoutTail": [], "stderrTail": [f"Unknown method {method}"]}
+        cmd = params["command"]
+        cwd = params["workDir"]
+        env = params.get("env", {})
+        timeout = params.get("timeoutS", 60)
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=cwd,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            return {
+                "exitCode": proc.returncode,
+                "stdoutTail": proc.stdout.splitlines()[-20:] if proc.stdout else [],
+                "stderrTail": proc.stderr.splitlines()[-20:] if proc.stderr else [],
+            }
+        except subprocess.TimeoutExpired:
+            return {"exitCode": -1, "stdoutTail": [], "stderrTail": ["Timeout"]}
+        except Exception as exc:
+            return {"exitCode": -1, "stdoutTail": [], "stderrTail": [str(exc)]}
+    return _mock_rpc
+
+
 @pytest.mark.asyncio
-async def test_generate_document_docx_happy_path(test_ctx: ToolContext):
+async def test_generate_document_fails_when_script_errors(test_ctx: ToolContext):
+    """Test that failing script execution returns clear diagnostic failure."""
+    tool = GenerateDocumentTool(rpc_runner=None)
+    inp = GenerateDocumentInput(
+        taskDescription="Generate compressor audit docx",
+        outputFormat="docx",
+        outputFilename="compressor_audit.docx",
+        scriptCode="raise RuntimeError('Synthetic script crash')",
+        sourceRefs=["SOP-ENG-042"],
+    )
+    res = await tool.run(inp, test_ctx)
+    assert not res.success
+    assert "Document generation failed" in res.error
+
+
+@pytest.mark.asyncio
+async def test_generate_document_docx_happy_path(test_ctx: ToolContext, test_sandbox_rpc):
     """Test generating a valid DOCX document from sandboxed Python script."""
     script = """
 import os
@@ -42,7 +91,7 @@ doc.add_heading("Compressor Stage-2 Audit Report", level=1)
 doc.add_paragraph("Comprehensive vibration analysis completed.")
 doc.save("out/compressor_audit.docx")
 """
-    tool = GenerateDocumentTool()
+    tool = GenerateDocumentTool(rpc_runner=test_sandbox_rpc)
     inp = GenerateDocumentInput(
         taskDescription="Generate compressor audit docx",
         outputFormat="docx",
@@ -67,7 +116,7 @@ doc.save("out/compressor_audit.docx")
 
 
 @pytest.mark.asyncio
-async def test_generate_document_xlsx_happy_path(test_ctx: ToolContext):
+async def test_generate_document_xlsx_happy_path(test_ctx: ToolContext, test_sandbox_rpc):
     """Test generating a valid XLSX spreadsheet from sandboxed Python script with data.json."""
     input_data = [
         {"tag": "V-101", "reading_mm": 14.2},
@@ -91,7 +140,7 @@ for item in data:
 
 wb.save("out/survey.xlsx")
 """
-    tool = GenerateDocumentTool()
+    tool = GenerateDocumentTool(rpc_runner=test_sandbox_rpc)
     inp = GenerateDocumentInput(
         taskDescription="Generate survey sheet from data.json",
         outputFormat="xlsx",
@@ -113,7 +162,7 @@ wb.save("out/survey.xlsx")
 
 
 @pytest.mark.asyncio
-async def test_generate_document_pptx_happy_path(test_ctx: ToolContext):
+async def test_generate_document_pptx_happy_path(test_ctx: ToolContext, test_sandbox_rpc):
     """Test generating a valid PPTX slide deck with closing attestation slide."""
     script = """
 import os
@@ -125,7 +174,7 @@ slide = prs.slides.add_slide(prs.slide_layouts[0])
 slide.shapes.title.text = "Refinery Turnaround Q3 Review"
 prs.save("out/turnaround.pptx")
 """
-    tool = GenerateDocumentTool()
+    tool = GenerateDocumentTool(rpc_runner=test_sandbox_rpc)
     inp = GenerateDocumentInput(
         taskDescription="Generate turnaround review presentation",
         outputFormat="pptx",
@@ -144,7 +193,7 @@ prs.save("out/turnaround.pptx")
 
 
 @pytest.mark.asyncio
-async def test_generate_document_pdf_happy_path(test_ctx: ToolContext):
+async def test_generate_document_pdf_happy_path(test_ctx: ToolContext, test_sandbox_rpc):
     """Test generating a valid PDF with per-page transparent ReportLab overlay."""
     script = """
 import os
@@ -162,7 +211,7 @@ story = [
 ]
 doc.build(story)
 """
-    tool = GenerateDocumentTool()
+    tool = GenerateDocumentTool(rpc_runner=test_sandbox_rpc)
     inp = GenerateDocumentInput(
         taskDescription="Generate multi-page inspection report pdf",
         outputFormat="pdf",
@@ -191,7 +240,7 @@ doc.build(story)
 @pytest.mark.asyncio
 async def test_generate_document_markdown_direct_path(test_ctx: ToolContext):
     """Test markdown generation directly writes without sandbox execution."""
-    tool = GenerateDocumentTool()
+    tool = GenerateDocumentTool(rpc_runner=None)
     inp = GenerateDocumentInput(
         taskDescription="Generate safety memo",
         outputFormat="md",
@@ -212,9 +261,9 @@ async def test_generate_document_markdown_direct_path(test_ctx: ToolContext):
 
 
 @pytest.mark.asyncio
-async def test_generate_document_pdf_from_markdown(test_ctx: ToolContext):
+async def test_generate_document_pdf_from_markdown(test_ctx: ToolContext, test_sandbox_rpc):
     """Test generating a PDF from markdown content when script_code is omitted."""
-    tool = GenerateDocumentTool()
+    tool = GenerateDocumentTool(rpc_runner=test_sandbox_rpc)
     inp = GenerateDocumentInput(
         taskDescription="Generate LLM Overview PDF",
         outputFormat="pdf",
@@ -234,7 +283,7 @@ async def test_generate_document_pdf_from_markdown(test_ctx: ToolContext):
 
 
 @pytest.mark.asyncio
-async def test_script_traceback_repair_loop(test_ctx: ToolContext):
+async def test_script_traceback_repair_loop(test_ctx: ToolContext, test_sandbox_rpc):
     """Test that a script error triggers repair and succeeds on subsequent iteration."""
     broken_script = """
 import os
@@ -251,10 +300,10 @@ doc.save("out/repaired.docx")
 """
     mock_turn_loop = AsyncMock()
     mock_turn_loop.request_code_repair.return_value = fixed_script
-
     mock_session_store = AsyncMock()
 
     tool = GenerateDocumentTool(
+        rpc_runner=test_sandbox_rpc,
         turn_loop=mock_turn_loop,
         session_store=mock_session_store,
     )
@@ -274,7 +323,7 @@ doc.save("out/repaired.docx")
 
 
 @pytest.mark.asyncio
-async def test_spoofing_detection_triggers_repair(test_ctx: ToolContext):
+async def test_spoofing_detection_triggers_repair(test_ctx: ToolContext, test_sandbox_rpc):
     """Test that manual provenance spoofing triggers validation failure and repair."""
     spoofed_script = """
 import os
@@ -296,7 +345,10 @@ doc.save("out/spoofed.docx")
     mock_turn_loop = AsyncMock()
     mock_turn_loop.request_code_repair.return_value = clean_script
 
-    tool = GenerateDocumentTool(turn_loop=mock_turn_loop)
+    tool = GenerateDocumentTool(
+        rpc_runner=test_sandbox_rpc,
+        turn_loop=mock_turn_loop,
+    )
     inp = GenerateDocumentInput(
         taskDescription="Test spoof detection",
         outputFormat="docx",

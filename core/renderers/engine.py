@@ -74,7 +74,7 @@ class DeliverableRenderEngine:
                 schema_obj, prov, out_path, template_name
             )
 
-        elif d_type == "inspection_summary":
+        elif d_type in ("inspection_summary", "inspection_report"):
             assert isinstance(schema_obj, InspectionSummarySchema)
             return self.docx_renderer.render_inspection_summary(
                 schema_obj, prov, out_path, template_name
@@ -102,7 +102,7 @@ class DeliverableRenderEngine:
         """Parse raw dictionary into Pydantic deliverable model."""
         if d_type == "approval_note":
             return ApprovalNoteSchema.model_validate(data)
-        elif d_type == "inspection_summary":
+        elif d_type in ("inspection_summary", "inspection_report"):
             return InspectionSummarySchema.model_validate(data)
         elif d_type == "review_deck":
             return ReviewDeckSchema.model_validate(data)
@@ -128,6 +128,12 @@ class DeliverableRenderEngine:
             for rec in getattr(schema_obj, "recommendations", []):
                 for c in getattr(rec, "citations", []):
                     sources.add(c.doc_id)
+        if hasattr(schema_obj, "findings"):
+            for f in getattr(schema_obj, "findings", []):
+                for c in getattr(f, "citations", []):
+                    sources.add(c.doc_id)
+                for fid in getattr(f, "extracted_field_ids", []):
+                    sources.add(fid)
         if hasattr(schema_obj, "observed_defects"):
             for d in getattr(schema_obj, "observed_defects", []):
                 for c in getattr(d, "citations", []):

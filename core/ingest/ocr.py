@@ -17,14 +17,23 @@ from ingest.types import BoundingBox, ExtractedWord
 log = structlog.get_logger()
 
 
-class OCREngineNotFoundError(Exception):
-    """Raised when Tesseract OCR binary is not installed or missing from PATH."""
+class OcrEngineUnavailable(RuntimeError):
+    """Raised when Tesseract OCR binary is not installed or missing from system PATH."""
 
     def __init__(
         self,
-        message: str = "Tesseract OCR binary not found. Please install tesseract.",
+        message: str = (
+            "Tesseract OCR executable ('tesseract') was not found on system PATH. "
+            "OCR extraction for scanned documents requires Tesseract. "
+            "Installation: on Windows run 'winget install UB-Mannheim.TesseractOCR' and ensure it is in PATH; "
+            "on Linux run 'sudo apt install tesseract-ocr'."
+        ),
     ) -> None:
         super().__init__(message)
+
+
+# Backward-compatible alias
+OCREngineNotFoundError = OcrEngineUnavailable
 
 
 def extract_words_pdfplumber(pdf_path: str | Path, page_num: int) -> list[ExtractedWord]:
@@ -85,10 +94,10 @@ def extract_words_tesseract(pil_img: Image.Image, page_num: int) -> list[Extract
     try:
         data = pytesseract.image_to_data(pil_img, output_type=Output.DICT)
     except (pytesseract.TesseractNotFoundError, FileNotFoundError) as exc:
-        raise OCREngineNotFoundError(
-            "Tesseract OCR executable was not found on system PATH. Install tesseract."
-        ) from exc
+        raise OcrEngineUnavailable() from exc
     except Exception as exc:
+        if "tesseract is not installed" in str(exc).lower() or "not found" in str(exc).lower():
+            raise OcrEngineUnavailable() from exc
         log.warning("tesseract_ocr_error", error=str(exc), page_num=page_num)
         return []
 

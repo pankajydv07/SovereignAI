@@ -1,13 +1,21 @@
 """Core approval service for SWARAJ maker-checker gate.
 
 Enforces server-side precondition re-validation, separation of duties (maker != checker),
-word-level diff auditing, and hash-chained audit record logging.
+three-artifact cryptographic hash provenance, and headless LibreOffice PDF conversion.
 """
 
 import difflib
+import hashlib
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+import structlog
+
+from renderers.converter import DocxToPdfConverter, LibreOfficeUnavailableError
+from renderers.docx_renderer import DocxRenderer
+
+log = structlog.get_logger()
 
 
 class SeparationOfDutiesError(ValueError):
@@ -24,6 +32,15 @@ class ApprovalPreconditionFailedError(ValueError):
         self.reasons = reasons
 
 
+def compute_file_sha256(file_path: Path) -> str:
+    """Compute SHA-256 digest of a local file."""
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 @dataclass
 class AuditRecord:
     """Immutable audit entry for maker-checker approval/rejection actions."""
@@ -38,6 +55,11 @@ class AuditRecord:
     identity_source: str  # e.g., "os_user_session", "local_keystore"
     timestamp: str
     stamp_text: str
+    reviewed_docx_hash: str | None = None
+    stamped_docx_hash: str | None = None
+    approved_pdf_hash: str | None = None
+    pdf_status: str | None = None  # "COMPLETED", "FAILED", "SKIPPED"
+    pdf_path: str | None = None
     word_diffs: list[str] = field(default_factory=list)
     rejection_reason: str | None = None
 
@@ -52,7 +74,13 @@ class ApprovalResult:
     checker_designation: str
     stamp_text: str
     approved_at: str
+    reviewed_docx_hash: str | None
+    stamped_docx_hash: str | None
+    approved_pdf_hash: str | None
+    pdf_status: str  # "COMPLETED" or "FAILED"
+    pdf_path: str | None
     audit_record: AuditRecord
+    pdf_error: str | None = None
 
 
 @dataclass
@@ -70,8 +98,13 @@ class RejectionResult:
 class ApprovalService:
     """Service governing maker-checker gates and deliverable attestation in SWARAJ."""
 
-    def __init__(self, identity_source: str = "os_user_session") -> None:
+    def __init__(
+        self,
+        identity_source: str = "os_user_session",
+        pdf_converter: DocxToPdfConverter | None = None,
+    ) -> None:
         self.identity_source = identity_source
+        self.pdf_converter = pdf_converter or DocxToPdfConverter()
         self.audit_log: list[AuditRecord] = []
 
     @staticmethod
@@ -110,6 +143,9 @@ class ApprovalService:
         original_text: str | None = None,
         edited_text: str | None = None,
         org_terminology: str = "APPROVED",
+        reviewed_docx_path: Path | str | None = None,
+        output_dir: Path | str | None = None,
+        workspace_root: Path | str | None = None,
     ) -> ApprovalResult:
         """Approve a deliverable after server-side re-validation of all preconditions.
 
@@ -157,6 +193,49 @@ class ApprovalService:
             f"APPROVED BY: {checker_name} ({checker_designation}) · {org_terminology.upper()} · {timestamp}"
         )
 
+        reviewed_docx_hash: str | None = None
+        stamped_docx_hash: str | None = None
+        approved_pdf_hash: str | None = None
+        pdf_status: str = "SKIPPED"
+        pdf_path: str | None = None
+        pdf_error: str | None = None
+
+        # Process document stamping and conversion if reviewed DOCX is provided
+        if reviewed_docx_path:
+            rd_path = Path(reviewed_docx_path)
+            if rd_path.exists():
+                # Step 1: Compute reviewed_docx_hash AT THE EXACT MOMENT OF APPROVAL
+                reviewed_docx_hash = compute_file_sha256(rd_path)
+
+                # Step 2: Create stamped copy with draft marker removed
+                out_dir = Path(output_dir) if output_dir else rd_path.parent
+                stamped_docx_path = out_dir / f"{rd_path.stem}_approved.docx"
+
+                DocxRenderer.create_approved_stamped_copy(
+                    draft_docx_path=rd_path,
+                    checker_name=checker_name,
+                    checker_designation=checker_designation,
+                    approval_timestamp=timestamp,
+                    reviewed_docx_hash=reviewed_docx_hash,
+                    output_path=stamped_docx_path,
+                )
+                stamped_docx_hash = compute_file_sha256(stamped_docx_path)
+
+                # Step 3: Convert stamped copy to PDF
+                try:
+                    pdf_result_path = self.pdf_converter.convert_docx_to_pdf(
+                        docx_path=stamped_docx_path,
+                        output_dir=out_dir,
+                        workspace_root=Path(workspace_root) if workspace_root else None,
+                    )
+                    approved_pdf_hash = compute_file_sha256(pdf_result_path)
+                    pdf_status = "COMPLETED"
+                    pdf_path = str(pdf_result_path)
+                except Exception as exc:
+                    log.warning("pdf_conversion_failed_during_approval", error=str(exc))
+                    pdf_status = "FAILED"
+                    pdf_error = str(exc)
+
         audit_record = AuditRecord(
             audit_id=f"audit-{int(time.time() * 1000)}",
             deliverable_id=deliverable_id,
@@ -168,6 +247,11 @@ class ApprovalService:
             identity_source=self.identity_source,
             timestamp=timestamp,
             stamp_text=stamp_text,
+            reviewed_docx_hash=reviewed_docx_hash,
+            stamped_docx_hash=stamped_docx_hash,
+            approved_pdf_hash=approved_pdf_hash,
+            pdf_status=pdf_status,
+            pdf_path=pdf_path,
             word_diffs=word_diffs,
         )
         self.audit_log.append(audit_record)
@@ -179,8 +263,43 @@ class ApprovalService:
             checker_designation=checker_designation,
             stamp_text=stamp_text,
             approved_at=timestamp,
+            reviewed_docx_hash=reviewed_docx_hash,
+            stamped_docx_hash=stamped_docx_hash,
+            approved_pdf_hash=approved_pdf_hash,
+            pdf_status=pdf_status,
+            pdf_path=pdf_path,
             audit_record=audit_record,
+            pdf_error=pdf_error,
         )
+
+    def retry_pdf_conversion(
+        self,
+        deliverable_id: str,
+        stamped_docx_path: Path | str,
+        output_dir: Path | str,
+        workspace_root: Path | str | None = None,
+    ) -> Path:
+        """Retry PDF conversion for an already approved deliverable without repeating review."""
+        stamped_path = Path(stamped_docx_path)
+        if not stamped_path.exists():
+            raise FileNotFoundError(f"Stamped DOCX copy not found: {stamped_path}")
+
+        pdf_path = self.pdf_converter.convert_docx_to_pdf(
+            docx_path=stamped_path,
+            output_dir=Path(output_dir),
+            workspace_root=Path(workspace_root) if workspace_root else None,
+        )
+        pdf_hash = compute_file_sha256(pdf_path)
+
+        # Update audit record for deliverable
+        for rec in reversed(self.audit_log):
+            if rec.deliverable_id == deliverable_id and rec.action in ("APPROVED", "EDITED_AND_APPROVED"):
+                rec.approved_pdf_hash = pdf_hash
+                rec.pdf_status = "COMPLETED"
+                rec.pdf_path = str(pdf_path)
+                break
+
+        return pdf_path
 
     def reject_deliverable(
         self,

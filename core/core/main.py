@@ -13,6 +13,24 @@ core_root = Path(__file__).resolve().parent.parent
 if str(core_root) not in sys.path:
     sys.path.insert(0, str(core_root))
 
+import structlog
+
+# Ensure ALL logging from standard logging and structlog goes strictly to stderr
+logging.basicConfig(
+    stream=sys.stderr,
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
+structlog.configure(
+    processors=[
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+        structlog.dev.ConsoleRenderer(),
+    ],
+    logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
+)
+
 from core.chat_handlers import ChatManager
 from agent.policy import PolicyEngine
 from models.discovery import ModelDiscoverer

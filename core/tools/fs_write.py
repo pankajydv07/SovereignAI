@@ -100,9 +100,6 @@ class FsWriteTool(BaseTool[FsWriteInput, FsWriteOutput]):
 
         except Exception as exc:
             # Clean up temp file on failure/cancellation
-            if tmp_path and tmp_path.exists():
-                try:
-                    tmp_path.unlink()
-                except OSError:
-                    pass
+            if tmp_path:
+                tmp_path.unlink(missing_ok=True)
             return ToolResult.failed(f"Atomic file write failed for '{args.path}': {exc}")

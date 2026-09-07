@@ -16,15 +16,15 @@ class ToolRegistry:
         "code_generate": ["fs_read", "fs_list", "glob", "fs_write", "code_exec", "generate_document"],
         "code_debug": ["fs_read", "fs_list", "glob", "fs_write", "code_exec"],
         "code": ["fs_read", "fs_list", "glob", "fs_write", "code_exec", "calc_exec"],
-        "planner": ["fs_read", "fs_list", "glob"],
-        "writer": ["fs_read", "fs_write", "render_deliverable", "calc_exec", "kb_search"],
+        "planner": ["fs_read", "fs_list", "glob", "fs_write", "generate_document"],
+        "writer": ["fs_read", "fs_write", "generate_document", "kb_search"],
         "calc": ["fs_read", "fs_write", "code_exec", "calc_exec"],
         "engineering_calc": ["fs_read", "fs_write", "code_exec", "calc_exec"],
         "render": ["fs_read", "fs_write", "render_deliverable"],
         "kb_qa": ["fs_read", "fs_list", "kb_search", "fs_write"],
         "vision_ocr": ["fs_read", "fs_list", "glob", "doc_ingest"],
-        "other": ["fs_read", "fs_list", "glob", "fs_write", "generate_document", "calc_exec"],
-        "default": ["fs_read", "fs_list", "glob", "fs_write", "generate_document", "calc_exec"],
+        "other": ["fs_read", "fs_list", "glob", "fs_write", "generate_document"],
+        "default": ["fs_read", "fs_list", "glob", "fs_write", "generate_document"],
     }
 
     MAX_TOOLS_PER_TASK: int = 6

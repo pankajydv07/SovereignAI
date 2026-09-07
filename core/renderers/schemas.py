@@ -17,13 +17,31 @@ class UncitedClaimError(ValueError):
     pass
 
 
+class LowConfidenceFieldUnverifiedError(ValueError):
+    """Raised when an official deliverable references an unverified extraction field with low confidence."""
+
+    pass
+
+
 class CitationRef(BaseModel):
-    """Citation link referencing source material in the knowledge base."""
+    """Citation link referencing source material in the knowledge base or extracted field."""
 
     doc_id: str = Field(description="Document ID or reference tag")
-    title: str = Field(description="Document or report title")
-    clause_or_section: str = Field(description="Specific clause, section, or page reference")
+    title: str = Field(default="", description="Document or report title")
+    clause_or_section: str = Field(
+        default="", description="Specific clause, section, or page reference"
+    )
+    extracted_field_id: str | None = Field(
+        default=None, description="Extracted field ID if provenance is from OCR/Extraction"
+    )
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Extraction confidence")
+    is_verified: bool = Field(
+        default=True, description="Whether field has been verified by human checker"
+    )
+    source_page: int | None = Field(default=None, description="Source document page number")
+    source_region_bbox: list[float] | None = Field(
+        default=None, description="Bounding box [ymin, xmin, ymax, xmax]"
+    )
 
 
 class SystemProvenanceMetadata(BaseModel):
@@ -105,18 +123,61 @@ class DefectItem(BaseModel):
     citations: list[CitationRef] = Field(description="Citations referencing inspection logs/photos")
 
 
+class InspectionFinding(BaseModel):
+    """Structured inspection finding with defect categorization and provenance link."""
+
+    finding_id: str = Field(description="Unique finding identifier (e.g., FIND-C101-01)")
+    category: str = Field(
+        description="Category (CORROSION, EROSION, CRACK, LEAK, MECHANICAL_DAMAGE, COATING_FAILURE, WALL_THINNING, OTHER)"
+    )
+    severity: str = Field(description="Severity (LOW, MEDIUM, HIGH, CRITICAL)")
+    equipment_tag: str = Field(description="Plant equipment tag (e.g., C-101, CML-07)")
+    description: str = Field(description="Detailed finding narrative")
+    source_page: int = Field(default=1, description="Page in inspection report")
+    source_region_bbox: list[float] | None = Field(
+        default=None, description="Bounding box [ymin, xmin, ymax, xmax]"
+    )
+    extracted_field_ids: list[str] = Field(
+        default_factory=list, description="Associated extracted field IDs"
+    )
+    citations: list[CitationRef] = Field(default_factory=list, description="Source citations")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Extraction confidence")
+    verification_status: str = Field(
+        default="UNVERIFIED", description="Status (UNVERIFIED, VERIFIED, REJECTED)"
+    )
+    recommended_action: str = Field(
+        default="", description="Recommended engineering action or repair"
+    )
+    photograph_path: str | None = Field(default=None, description="Path to inspection photo")
+    inspection_method: str = Field(
+        default="UT", description="NDT method (UT, MPI, Radiography, Visual, Dye-Penetrant)"
+    )
+
+
 class InspectionSummarySchema(BaseModel):
     """Inspection report summary deliverable schema."""
 
     asset_tag: str = Field(description="Plant equipment tag number (e.g., 11-V-102)")
+    equipment_tag: str | None = Field(
+        default=None, description="Optional explicit equipment tag"
+    )
     inspection_date: str = Field(description="Date of inspection (YYYY-MM-DD)")
     inspection_method: str = Field(description="NDT method (UT, MPI, Radiography, Visual)")
+    findings: list[InspectionFinding] = Field(
+        default_factory=list, description="Structured inspection findings"
+    )
     thickness_readings: list[ThicknessReading] = Field(default_factory=list)
     observed_defects: list[DefectItem] = Field(default_factory=list)
     ncrs: list[str] = Field(default_factory=list, description="Non-conformance report IDs")
-    recommendations: list[SubstantiveClaim] = Field(
-        description="Action recommendations with citations"
+    photographs: list[str] = Field(
+        default_factory=list, description="Inspection photograph paths"
     )
+    recommendations: list[SubstantiveClaim] = Field(
+        default_factory=list, description="Action recommendations with citations"
+    )
+
+
+InspectionReportSummary = InspectionSummarySchema
 
 
 class DeckSlide(BaseModel):
@@ -166,27 +227,6 @@ class CostSheetSchema(BaseModel):
     total_formula: str = Field(default="=SUM(D4:D{end})", description="Total formula string")
 
 
-__all__ = [
-    "UncitedClaimError",
-    "CitationRef",
-    "SystemProvenanceMetadata",
-    "SubstantiveClaim",
-    "ApprovalLadderRole",
-    "ApprovalNoteSchema",
-    "ThicknessReading",
-    "DefectItem",
-    "InspectionSummarySchema",
-    "DeckSlide",
-    "ReviewDeckSchema",
-    "CostLineItem",
-    "CostSheetSchema",
-    "ParameterProvenance",
-    "CalculationParameter",
-    "EngineeringCalculationSchema",
-    "validate_citations",
-]
-
-
 class EngineeringCalculationSchema(BaseModel):
     """Engineering calculation deliverable schema.
 
@@ -204,10 +244,11 @@ class EngineeringCalculationSchema(BaseModel):
 
 
 def validate_citations(data: BaseModel) -> None:
-    """Enforce render-time citation verification on substantive claims.
+    """Enforce render-time citation verification and checker verification gates on substantive claims.
 
-    Raises UncitedClaimError if any substantive observation, defect, or recommendation
-    lacks at least one valid source citation.
+    Raises:
+    - UncitedClaimError if any substantive observation, defect, or recommendation lacks at least one citation.
+    - LowConfidenceFieldUnverifiedError if any cited field has confidence < 0.85 and is not verified by a checker.
     """
 
     if isinstance(data, ApprovalNoteSchema):
@@ -216,17 +257,48 @@ def validate_citations(data: BaseModel) -> None:
                 raise UncitedClaimError(
                     f"Observation claim '{obs.text[:40]}...' lacks required citations"
                 )
+            for cit in obs.citations:
+                if cit.confidence < 0.85 and not cit.is_verified:
+                    field_id = cit.extracted_field_id or cit.doc_id
+                    page_info = f" on page {cit.source_page}" if cit.source_page else ""
+                    raise LowConfidenceFieldUnverifiedError(
+                        f"Observation '{obs.text[:40]}...' references unverified field '{field_id}' "
+                        f"with low confidence {cit.confidence:.2f}{page_info}. "
+                        "Checker verification is required before deliverable can be rendered."
+                    )
         for rec in data.recommendation:
             if not rec.citations:
                 raise UncitedClaimError(
                     f"Recommendation claim '{rec.text[:40]}...' lacks required citations"
                 )
+            for cit in rec.citations:
+                if cit.confidence < 0.85 and not cit.is_verified:
+                    field_id = cit.extracted_field_id or cit.doc_id
+                    raise LowConfidenceFieldUnverifiedError(
+                        f"Recommendation '{rec.text[:40]}...' references unverified field '{field_id}' "
+                        f"with low confidence {cit.confidence:.2f}. "
+                        "Checker verification is required before deliverable can be rendered."
+                    )
 
     elif isinstance(data, InspectionSummarySchema):
         for defect in data.observed_defects:
             if not defect.citations:
                 raise UncitedClaimError(
                     f"Defect item '{defect.description[:40]}...' lacks required citations"
+                )
+            for cit in defect.citations:
+                if cit.confidence < 0.85 and not cit.is_verified:
+                    field_id = cit.extracted_field_id or cit.doc_id
+                    raise LowConfidenceFieldUnverifiedError(
+                        f"Defect item '{defect.description[:40]}...' references unverified field '{field_id}' "
+                        f"with low confidence {cit.confidence:.2f}."
+                    )
+        for finding in data.findings:
+            if finding.confidence < 0.85 and finding.verification_status != "VERIFIED":
+                raise LowConfidenceFieldUnverifiedError(
+                    f"Inspection finding '{finding.finding_id}' ({finding.description[:40]}...) "
+                    f"has low confidence {finding.confidence:.2f} and status '{finding.verification_status}'. "
+                    "Checker verification is required before deliverable can be rendered."
                 )
         for rec in data.recommendations:
             if not rec.citations:
@@ -239,3 +311,27 @@ def validate_citations(data: BaseModel) -> None:
             raise UncitedClaimError(
                 f"Engineering calculation '{data.title}' lacks required standard/code citations"
             )
+
+
+__all__ = [
+    "UncitedClaimError",
+    "LowConfidenceFieldUnverifiedError",
+    "CitationRef",
+    "SystemProvenanceMetadata",
+    "SubstantiveClaim",
+    "ApprovalLadderRole",
+    "ApprovalNoteSchema",
+    "ThicknessReading",
+    "DefectItem",
+    "InspectionFinding",
+    "InspectionSummarySchema",
+    "InspectionReportSummary",
+    "DeckSlide",
+    "ReviewDeckSchema",
+    "CostLineItem",
+    "CostSheetSchema",
+    "ParameterProvenance",
+    "CalculationParameter",
+    "EngineeringCalculationSchema",
+    "validate_citations",
+]

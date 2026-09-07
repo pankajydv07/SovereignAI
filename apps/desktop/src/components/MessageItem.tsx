@@ -12,6 +12,18 @@ export interface ChatMessage {
   thinking?: string;
   isStreaming?: boolean;
   interrupted?: boolean;
+  sources?: Array<{
+    chunkId: string;
+    docId: string;
+    headingPath: string;
+    page: number;
+    bbox?: any;
+    textSnippet: string;
+    cosineSimilarity: number;
+  }>;
+  isTruncated?: boolean;
+  totalMatches?: number;
+  showingCount?: number;
   metrics?: {
     total_duration?: number;
     eval_duration?: number;
@@ -122,6 +134,35 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg }) => {
       ) : msg.isStreaming ? (
         <div className="text-[13px] text-[#8B949E] font-mono animate-pulse">...</div>
       ) : null}
+
+      {msg.sources && msg.sources.length > 0 && (
+        <details className="group border border-[#263241] rounded-[4px] bg-[#121821] p-2 mt-2">
+          <summary className="cursor-pointer text-[#8B949E] hover:text-[#E6EDF3] text-[11px] font-mono flex items-center justify-between select-none">
+            <div className="flex items-center gap-1.5 text-[#10B981]">
+              <span className="font-bold">Sources ({msg.sources.length})</span>
+              {msg.isTruncated && (
+                <span className="text-[10px] text-[#F59E0B] bg-[#F59E0B]/10 px-1.5 py-0.2 rounded border border-[#F59E0B]/30">
+                  showing {msg.showingCount || msg.sources.length} of {msg.totalMatches || msg.sources.length} relevant chunks (context limit)
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-[#8B949E]">View groundings</span>
+          </summary>
+          <div className="mt-2 space-y-1.5 border-t border-[#263241] pt-2 font-mono text-[11px]">
+            {msg.sources.map((s, sIdx) => (
+              <div key={s.chunkId || sIdx} className="bg-[#0B0F14] p-1.5 rounded-[4px] border border-[#263241]/60">
+                <div className="text-[#4C8DF6] font-semibold flex items-center justify-between">
+                  <span>{s.docId} › {s.headingPath} (p. {s.page})</span>
+                  <span className="text-[10px] text-[#8B949E]">cos: {s.cosineSimilarity?.toFixed(2)}</span>
+                </div>
+                <div className="text-[#8B949E] text-[10px] mt-0.5 line-clamp-2">
+                  {s.textSnippet}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 };

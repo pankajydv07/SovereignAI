@@ -20,7 +20,7 @@ from renderers.schemas import (
     InspectionSummarySchema,
     SystemProvenanceMetadata,
 )
-from renderers.templates import TemplateManager
+from renderers.templates import MissingOrgTemplateError, TemplateManager
 
 
 class DocxRenderer:
@@ -36,15 +36,24 @@ class DocxRenderer:
         output_path: Path,
         template_name: str | None = "approval_note.docx",
     ) -> Path:
-        """Render ApprovalNoteSchema to .docx document."""
-        template_file = (
-            self.template_manager.find_template(template_name) if template_name else None
-        )
+        """Render ApprovalNoteSchema to .docx document.
 
-        if template_file and template_file.exists():
-            return self._render_tpl(template_file, data.model_dump(), prov, output_path)
+        Requires an approved organisation template. Fails loudly with MissingOrgTemplateError
+        if missing, preventing unapproved generic layouts from being produced.
+        """
+        tpl_name = template_name or "approval_note.docx"
+        template_file = self.template_manager.find_template(tpl_name)
 
-        return self._render_default_approval_note(data, prov, output_path)
+        if not template_file or not template_file.exists():
+            searched: list[Path] = []
+            if self.template_manager.workspace_root:
+                searched.append(
+                    self.template_manager.workspace_root / ".swaraj" / "templates" / tpl_name
+                )
+            searched.append(self.template_manager.user_template_dir / tpl_name)
+            raise MissingOrgTemplateError(tpl_name, searched_paths=searched)
+
+        return self._render_tpl(template_file, data.model_dump(), prov, output_path)
 
     def render_inspection_summary(
         self,
@@ -205,94 +214,6 @@ class DocxRenderer:
         saved_doc.save(str(output_path))
         return output_path
 
-    def _render_default_approval_note(
-        self,
-        data: ApprovalNoteSchema,
-        prov: SystemProvenanceMetadata,
-        output_path: Path,
-    ) -> Path:
-        """Build structured default PSU Approval Note document."""
-        doc: DocumentClass = Document()
-        self._setup_margins(doc)
-
-        # Header / Letterhead
-        hdr = doc.add_paragraph()
-        hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = hdr.add_run(
-            "MANGALORE REFINERY AND PETROCHEMICALS LIMITED\n"
-            "(A Subsidiary of Oil and Natural Gas Corporation Limited)"
-        )
-        run.bold = True
-        run.font.size = Pt(11)
-        run.font.color.rgb = RGBColor(0x1B, 0x36, 0x5D)
-
-        title = doc.add_paragraph()
-        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        t_run = title.add_run("INTER-OFFICE MEMORANDUM / APPROVAL NOTE")
-        t_run.bold = True
-        t_run.font.size = Pt(13)
-
-        # Subject & References
-        doc.add_heading(f"SUBJECT: {data.subject}", level=1)
-        if data.reference:
-            ref_p = doc.add_paragraph()
-            ref_p.add_run("References: ").bold = True
-            ref_p.add_run("; ".join(data.reference))
-
-        # Background
-        doc.add_heading("1. BACKGROUND", level=2)
-        doc.add_paragraph(data.background)
-
-        # Observations
-        doc.add_heading("2. OBSERVATIONS AND FINDINGS", level=2)
-        for i, obs in enumerate(data.observations, start=1):
-            p = doc.add_paragraph()
-            p.add_run(f"2.{i} {obs.text} ")
-            for cit in obs.citations:
-                c_run = p.add_run(f"[{cit.doc_id} §{cit.clause_or_section}]")
-                c_run.font.size = Pt(8.5)
-                c_run.font.color.rgb = RGBColor(0x4C, 0x8D, 0xF6)
-
-        # Financial Implication
-        doc.add_heading("3. FINANCIAL IMPLICATION", level=2)
-        doc.add_paragraph(data.financial_implication)
-
-        # Deviation (if any)
-        if data.deviation:
-            doc.add_heading("4. DEVIATION / EXCEPTION", level=2)
-            doc.add_paragraph(data.deviation)
-
-        # Recommendations
-        heading_num = 5 if data.deviation else 4
-        doc.add_heading(f"{heading_num}. RECOMMENDATION", level=2)
-        for i, rec in enumerate(data.recommendation, start=1):
-            p = doc.add_paragraph()
-            p.add_run(f"{heading_num}.{i} {rec.text} ")
-            for cit in rec.citations:
-                c_run = p.add_run(f"[{cit.doc_id} §{cit.clause_or_section}]")
-                c_run.font.size = Pt(8.5)
-                c_run.font.color.rgb = RGBColor(0x4C, 0x8D, 0xF6)
-
-        # Approval Ladder
-        doc.add_heading("APPROVAL LADDER (MAKER-CHECKER)", level=2)
-        tbl = doc.add_table(rows=1, cols=3)
-        hdr_cells = tbl.rows[0].cells
-        hdr_cells[0].text = "Role"
-        hdr_cells[1].text = "Officer Name & Designation"
-        hdr_cells[2].text = "Status"
-        for role_entry in data.approval_ladder:
-            row_cells = tbl.add_row().cells
-            row_cells[0].text = role_entry.role
-            row_cells[1].text = role_entry.name
-            row_cells[2].text = role_entry.status
-
-        # Non-removable provenance footer
-        self._add_provenance_footer_docx(doc, prov)
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        doc.save(str(output_path))
-        return output_path
-
     def _render_default_inspection_summary(
         self,
         data: InspectionSummarySchema,
@@ -378,3 +299,59 @@ class DocxRenderer:
         )
         info.font.size = Pt(7.5)
         info.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
+
+    @staticmethod
+    def create_approved_stamped_copy(
+        draft_docx_path: Path,
+        checker_name: str,
+        checker_designation: str,
+        approval_timestamp: str,
+        reviewed_docx_hash: str,
+        output_path: Path,
+    ) -> Path:
+        """Create an approved stamped copy of the draft DOCX.
+
+        Removes the DRAFT banner and injects the formal Approval Stamp carrying
+        the SHA-256 fingerprint of the reviewed working copy.
+        """
+        draft_docx_path = Path(draft_docx_path)
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        doc: DocumentClass = Document(str(draft_docx_path))
+
+        # 1. Clear footer draft warning banner and replace with Approval Stamp
+        for section in doc.sections:
+            footer = section.footer
+            for p in footer.paragraphs:
+                p.text = ""
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                stamp_run = p.add_run(
+                    f"OFFICIAL RECORD — APPROVED BY COMPETENT AUTHORITY\n"
+                    f"Approved By: {checker_name} ({checker_designation}) | Date: {approval_timestamp}\n"
+                    f"Reviewed Working Copy SHA-256: {reviewed_docx_hash[:16]}...{reviewed_docx_hash[-8:]}"
+                )
+                stamp_run.font.size = Pt(8.0)
+                stamp_run.font.color.rgb = RGBColor(0x10, 0xB9, 0x81)
+
+        # 2. Append formal Approval Stamp block at document end
+        p_stamp = doc.add_paragraph()
+        p_stamp.paragraph_format.space_before = Pt(18)
+        p_stamp.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        r_head = p_stamp.add_run("APPROVAL ATTESTATION & SIGN-OFF\n")
+        r_head.bold = True
+        r_head.font.size = Pt(10.0)
+
+        tbl = doc.add_table(rows=4, cols=2)
+        tbl.rows[0].cells[0].text = "Status:"
+        tbl.rows[0].cells[1].text = "APPROVED (Formal Sign-Off Complete)"
+        tbl.rows[1].cells[0].text = "Approved By:"
+        tbl.rows[1].cells[1].text = f"{checker_name} ({checker_designation})"
+        tbl.rows[2].cells[0].text = "Timestamp:"
+        tbl.rows[2].cells[1].text = approval_timestamp
+        tbl.rows[3].cells[0].text = "Reviewed Working Copy Digest:"
+        tbl.rows[3].cells[1].text = f"SHA-256: {reviewed_docx_hash}"
+
+        doc.save(str(output_path))
+        return output_path
+
