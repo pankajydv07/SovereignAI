@@ -52,6 +52,8 @@ class HybridSearchEngine:
         include_superseded: bool = False,
         today_date: str | None = None,
         query_vector: list[float] | None = None,
+        project_id: str | None = None,
+        uploader_id: str | None = None,
     ) -> tuple[list[SearchResult], bool, int]:
         """Mandatory retrieval chokepoint with role filtering, dual-gating, and context token ceiling.
 
@@ -66,32 +68,46 @@ class HybridSearchEngine:
         current_date = today_date or datetime.now().strftime("%Y-%m-%d")
         expected_dim = await self.embedder.get_dimension()
 
-        # Step 1: Execute FTS5 BM25 Keyword Search filtered by indexed role table
-        fts_query = """
+        role_params = [user_role, "*"]
+        if uploader_id:
+            role_params.append(uploader_id)
+        role_placeholders = ",".join("?" for _ in role_params)
+
+        # Step 1: Execute FTS5 BM25 Keyword Search filtered by indexed role table and project scope
+        fts_query = f"""
         SELECT c.id, c.doc_id, c.heading_path, c.body_text, c.token_count, c.page, c.bbox_json, d.title
         FROM kb_chunks_fts fts
         JOIN kb_chunks c ON fts.chunk_id = c.id
         JOIN kb_documents d ON c.doc_id = d.id
         WHERE fts.kb_chunks_fts MATCH ?
           AND d.status = 'COMPLETED'
-          AND EXISTS (SELECT 1 FROM kb_chunk_roles r WHERE r.chunk_id = c.id AND r.role IN (?, '*'))
+          AND EXISTS (SELECT 1 FROM kb_chunk_roles r WHERE r.chunk_id = c.id AND r.role IN ({role_placeholders}))
           AND d.effective_date <= ?
         """
+        fts_params: list[Any] = []
+        try:
+            terms = [f'"{t.replace("\"", "")}"' for t in query.split() if t.strip()]
+            clean_query = " ".join(terms)
+        except Exception:
+            clean_query = query
+
+        fts_params = [clean_query, *role_params, current_date]
+        if project_id:
+            fts_query += " AND (d.project_id = ? OR d.project_id = 'default-project' OR d.project_id = 'global' OR d.dept = 'General')"
+            fts_params.append(project_id)
         if not include_superseded:
             fts_query += " AND d.superseded_by IS NULL"
         fts_query += " LIMIT 50"
 
         fts_results: list[dict[str, Any]] = []
         try:
-            terms = [f'"{t.replace('"', "")}"' for t in query.split() if t.strip()]
-            clean_query = " ".join(terms)
-            async with conn.execute(fts_query, (clean_query, user_role, current_date)) as cursor:
+            async with conn.execute(fts_query, tuple(fts_params)) as cursor:
                 async for row in cursor:
                     fts_results.append(dict(row))
         except Exception as exc:
             log.warning("fts5_search_warning", error=str(exc), query=query)
 
-        # Step 2: Compute Dense Vector Cosine Similarity Search filtered by role
+        # Step 2: Compute Dense Vector Cosine Similarity Search filtered by role and project scope
         if query_vector is not None and len(query_vector) > 0:
             query_vec = query_vector
         else:
@@ -99,15 +115,19 @@ class HybridSearchEngine:
         if len(query_vec) != expected_dim:
             raise EmbeddingDimensionMismatchError(expected_dim, len(query_vec), self.embedder.model)
 
-        vec_query = """
+        vec_query = f"""
         SELECT v.chunk_id, v.embedding_json
         FROM kb_vectors v
         JOIN kb_chunks c ON v.chunk_id = c.id
         JOIN kb_documents d ON c.doc_id = d.id
         WHERE d.status = 'COMPLETED'
-          AND EXISTS (SELECT 1 FROM kb_chunk_roles r WHERE r.chunk_id = c.id AND r.role IN (?, '*'))
+          AND EXISTS (SELECT 1 FROM kb_chunk_roles r WHERE r.chunk_id = c.id AND r.role IN ({role_placeholders}))
           AND d.effective_date <= ?
         """
+        vec_params: list[Any] = [*role_params, current_date]
+        if project_id:
+            vec_query += " AND (d.project_id = ? OR d.project_id = 'default-project' OR d.project_id = 'global' OR d.dept = 'General')"
+            vec_params.append(project_id)
         if not include_superseded:
             vec_query += " AND d.superseded_by IS NULL"
 
@@ -117,7 +137,7 @@ class HybridSearchEngine:
             q_arr /= q_norm
 
         dense_scored: list[tuple[str, float]] = []
-        cursor = await conn.execute(vec_query, (user_role, current_date))
+        cursor = await conn.execute(vec_query, tuple(vec_params))
         rows = await cursor.fetchall()
         for row in rows:
             cid = str(row[0])

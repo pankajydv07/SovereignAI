@@ -64,6 +64,8 @@ describe("RoutingBadge Component", () => {
       />
     );
 
+    expect(screen.getByTestId("confidence-val").textContent).toBe("CONFIDENT");
+
     // Click badge to toggle popover
     fireEvent.click(screen.getByTestId("routing-badge-button"));
 

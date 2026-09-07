@@ -114,6 +114,9 @@ CREATE TABLE IF NOT EXISTS kb_documents (
     content_hash TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'COMPLETED',
     superseded_by TEXT,
+    project_id TEXT NOT NULL DEFAULT 'default-project',
+    session_id TEXT,
+    scope TEXT NOT NULL DEFAULT 'project',
     created_at_ms INTEGER NOT NULL
 );
 
@@ -290,6 +293,12 @@ class DatabaseManager:
                             await conn.execute("ALTER TABLE kb_documents ADD COLUMN content_hash TEXT NOT NULL DEFAULT '';")
                         if "superseded_by" not in cols:
                             await conn.execute("ALTER TABLE kb_documents ADD COLUMN superseded_by TEXT;")
+                        if "project_id" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN project_id TEXT NOT NULL DEFAULT 'default-project';")
+                        if "session_id" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN session_id TEXT;")
+                        if "scope" not in cols:
+                            await conn.execute("ALTER TABLE kb_documents ADD COLUMN scope TEXT NOT NULL DEFAULT 'project';")
             except Exception:  # allowed-silent
                 pass
             await conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION};")

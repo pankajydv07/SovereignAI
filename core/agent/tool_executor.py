@@ -119,6 +119,7 @@ async def handle_tool_call(
                     "tool_name": name,
                     "content": f"Refusal: Permission denied by user for '{name}'.",
                     "success": False,
+                    "denied": True,
                 }, None
 
         result: ToolResult = await tool_inst.run(validated_args, ctx)

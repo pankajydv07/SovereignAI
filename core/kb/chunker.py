@@ -88,6 +88,9 @@ class LayoutAwareChunker:
         revision: str = "rev.01",
         content_hash: str = "",
         superseded_by: str | None = None,
+        project_id: str = "default-project",
+        session_id: str | None = None,
+        scope: str = "project",
     ) -> KBDocument:
         """Parse IngestDocumentResult into layout-aware KBChunk items with heading path prefixes."""
         chunks: list[KBChunk] = []
@@ -102,29 +105,24 @@ class LayoutAwareChunker:
                 if not text:
                     continue
 
-                # Heading detection heuristic
-                if len(text) < 80 and (text.isupper() or re.match(r"^\d+(\.\d+)*\s+[A-Z]", text)):
+                # Heading detection heuristic: update hierarchical path
+                if len(text) < 100 and (text.isupper() or re.match(r"^\d+(\.\d+)*\s+[A-Z]", text)):
                     current_heading_path = [title, text]
                     continue
 
                 heading_prefix = " › ".join(current_heading_path)
-                total_est = count_tokens(f"{heading_prefix} › {text}")
+                is_table = region.region_type.value == "TABLE_GRID" or ("|" in text and "\n" in text)
 
-                if total_est > self.target_tokens:
-                    # Split oversized region
-                    sub_texts = self._split_long_text(text, heading_prefix)
-                else:
-                    sub_texts = [text]
-
-                for sub_text in sub_texts:
-                    token_count = count_tokens(f"{heading_prefix} › {sub_text}")
+                if is_table:
+                    # Tables are atomic chunks: never split rows, carry full headers/prefix, NO overlap
+                    token_count = count_tokens(f"{heading_prefix} › {text}")
                     chunk_id = f"chunk_{doc_id}_{chunk_idx}_{uuid.uuid4().hex[:6]}"
                     chunk = KBChunk(
                         id=chunk_id,
                         docId=doc_id,
                         chunkIndex=chunk_idx,
                         headingPath=heading_prefix,
-                        bodyText=sub_text,
+                        bodyText=text,
                         tokenCount=token_count,
                         page=page_num,
                         bbox=region.bbox,
@@ -133,9 +131,43 @@ class LayoutAwareChunker:
                         classification=classification,
                         effectiveDate=effective_date,
                         supersededBy=superseded_by,
+                        projectId=project_id,
+                        sessionId=session_id,
+                        scope=scope,
                     )
                     chunks.append(chunk)
                     chunk_idx += 1
+                else:
+                    # Prose clauses: split on token budget with heading path prefix
+                    total_est = count_tokens(f"{heading_prefix} › {text}")
+                    if total_est > self.target_tokens:
+                        sub_texts = self._split_long_text(text, heading_prefix)
+                    else:
+                        sub_texts = [text]
+
+                    for sub_text in sub_texts:
+                        token_count = count_tokens(f"{heading_prefix} › {sub_text}")
+                        chunk_id = f"chunk_{doc_id}_{chunk_idx}_{uuid.uuid4().hex[:6]}"
+                        chunk = KBChunk(
+                            id=chunk_id,
+                            docId=doc_id,
+                            chunkIndex=chunk_idx,
+                            headingPath=heading_prefix,
+                            bodyText=sub_text,
+                            tokenCount=token_count,
+                            page=page_num,
+                            bbox=region.bbox,
+                            allowedRoles=allowed_roles,
+                            dept=dept,
+                            classification=classification,
+                            effectiveDate=effective_date,
+                            supersededBy=superseded_by,
+                            projectId=project_id,
+                            sessionId=session_id,
+                            scope=scope,
+                        )
+                        chunks.append(chunk)
+                        chunk_idx += 1
 
         log.debug("document_chunked", doc_id=doc_id, total_chunks=len(chunks))
         return KBDocument(
@@ -147,5 +179,8 @@ class LayoutAwareChunker:
             classification=classification,
             effectiveDate=effective_date,
             supersededBy=superseded_by,
+            projectId=project_id,
+            sessionId=session_id,
+            scope=scope,
             chunks=chunks,
         )

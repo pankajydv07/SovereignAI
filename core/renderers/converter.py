@@ -57,9 +57,11 @@ class DocxToPdfConverter:
 
         # 2. Local vendor directory in project
         vendor_locations = [
+            Path("bin/libreoffice/soffice.exe"),
             Path("bin/libreoffice/program/soffice.exe"),
-            Path("bin/libreoffice/program/soffice"),
+            Path("../bin/libreoffice/soffice.exe"),
             Path("../bin/libreoffice/program/soffice.exe"),
+            Path("../../bin/libreoffice/soffice.exe"),
             Path("../../bin/libreoffice/program/soffice.exe"),
         ]
         for v in vendor_locations:
@@ -161,3 +163,77 @@ class DocxToPdfConverter:
                 shutil.rmtree(profile_dir, ignore_errors=True)
             except Exception as e:
                 log.debug("cleanup_lo_profile_error", error=str(e), profile_dir=str(profile_dir))
+
+    def convert_to_png(
+        self,
+        input_path: Path,
+        output_dir: Path,
+        workspace_root: Path | None = None,
+        timeout_s: int = 45,
+    ) -> list[Path]:
+        """Rasterise PDF, PPTX or DOCX to PNG images using headless LibreOffice."""
+        input_path = Path(input_path).resolve()
+        output_dir = Path(output_dir).resolve()
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        if not input_path.exists():
+            raise FileNotFoundError(f"Input file not found: {input_path}")
+
+        run_id = uuid4().hex[:8]
+        ws_base = Path(workspace_root).resolve() if workspace_root else Path.cwd().resolve()
+        profile_dir = ws_base / ".swaraj" / f"lo-profile-{run_id}"
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        profile_uri = profile_dir.as_uri()
+
+        cmd = [
+            str(self.get_soffice_path()),
+            f"-env:UserInstallation={profile_uri}",
+            "--headless",
+            "--convert-to",
+            "png",
+            "--outdir",
+            str(output_dir),
+            str(input_path),
+        ]
+
+        log.info(
+            "libreoffice_png_rasterisation_start",
+            input_path=str(input_path),
+            output_dir=str(output_dir),
+            run_id=run_id,
+        )
+
+        fonts_dir = Path(__file__).parent / "fonts"
+        proc_env = os.environ.copy()
+        if fonts_dir.exists():
+            sep = ";" if os.name == "nt" else ":"
+            proc_env["SAL_FONTPATH"] = f"{fonts_dir.resolve()}{sep}{proc_env.get('SAL_FONTPATH', '')}"
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+                check=False,
+                env=proc_env,
+            )
+            if proc.returncode != 0:
+                err_msg = proc.stderr or proc.stdout
+                log.error("libreoffice_png_rasterisation_failed", returncode=proc.returncode, error=err_msg)
+                raise RuntimeError(f"LibreOffice PNG rasterisation failed (code {proc.returncode}): {err_msg}")
+
+            # LibreOffice produces {stem}.png (or {stem}_1.png, etc.)
+            png_files = sorted(list(output_dir.glob(f"{input_path.stem}*.png")))
+            if not png_files:
+                raise RuntimeError(f"No PNG rasterised output found for: {input_path}")
+
+            log.info("libreoffice_png_rasterisation_success", count=len(png_files))
+            return png_files
+
+        finally:
+            try:
+                shutil.rmtree(profile_dir, ignore_errors=True)
+            except Exception as e:
+                log.debug("cleanup_lo_profile_error", error=str(e), profile_dir=str(profile_dir))
+

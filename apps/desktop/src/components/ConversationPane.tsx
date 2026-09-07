@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Square, Bot, Paperclip, X } from "lucide-react";
+import { Send, Square, Bot, Paperclip, X, Database } from "lucide-react";
 import { ApprovalCard, PermissionOption } from "./ApprovalCard";
 import { PlanCard, PlanStepItem } from "./PlanCard";
 import { MessageItem, ChatMessage } from "./MessageItem";
@@ -30,41 +30,27 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [planFirst, setPlanFirst] = useState(false);
+  const [ragMode, setRagMode] = useState(false);
   const [activeStreamId, setActiveStreamId] = useState<number | null>(null);
   const [fallbackSessionId] = useState<string>(() => `session-${Date.now()}`);
   const currentSessionId = activeSessionId || fallbackSessionId;
-  const [activeRouting, setActiveRouting] = useState<{
-    modelTag: string;
-    taskClass: string;
-    confidence: number;
-  } | null>(null);
-
-  const [pendingPermission, setPendingPermission] =
-    useState<ActivePermissionRequest | null>(null);
-  const [activePlanSteps, setActivePlanSteps] = useState<PlanStepItem[] | null>(
-    null
-  );
-  const [attachments, setAttachments] = useState<
-    Array<{ name: string; path: string }>
-  >([]);
+  const [activeRouting, setActiveRouting] = useState<{ modelTag: string; taskClass: string; confidence: number } | null>(null);
+  const [pendingPermission, setPendingPermission] = useState<ActivePermissionRequest | null>(null);
+  const [activePlanSteps, setActivePlanSteps] = useState<PlanStepItem[] | null>(null);
+  const [attachments, setAttachments] = useState<Array<{ name: string; path: string }>>([]);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const userScrolledUpRef = useRef(false);
 
   const handleAttachFile = async () => {
-    const isTauri =
-      typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-    if (isTauri) {
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const filePath = await invoke<string | null>("select_file");
         if (filePath) {
           const fileName = filePath.split(/[/\\]/).pop() || filePath;
-          setAttachments((prev) => [
-            ...prev,
-            { name: fileName, path: filePath },
-          ]);
+          setAttachments((prev) => [...prev, { name: fileName, path: filePath }]);
         }
       } catch (err) {
         console.error("Failed to select file:", err);
@@ -79,8 +65,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   const handleScroll = () => {
     const el = scrollContainerRef.current;
     if (!el) return;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    userScrolledUpRef.current = !isNearBottom;
+    userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight >= 80;
   };
 
   useEffect(() => {
@@ -89,66 +74,35 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
     }
   }, [messages, pendingPermission, activePlanSteps]);
 
-  useSessionHistory({
-    activeSessionId,
-    activeProject,
-    setMessages,
-    setActiveRouting,
-    setActivePlanSteps,
-  });
-
-  useChatStreamListeners({
-    setMessages,
-    setActiveRouting,
-    setPendingPermission,
-    setActivePlanSteps,
-    setActiveStreamId,
-  });
+  useSessionHistory({ activeSessionId, activeProject, setMessages, setActiveRouting, setActivePlanSteps });
+  useChatStreamListeners({ setMessages, setActiveRouting, setPendingPermission, setActivePlanSteps, setActiveStreamId });
 
   const handleSend = async () => {
-    if (!inputText.trim() || activeStreamId !== null) return;
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: "user",
-      content: inputText.trim(),
-    };
+    const trimmed = inputText.trim();
+    if ((!trimmed && attachments.length === 0) || activeStreamId !== null) return;
+    const promptText = trimmed || `Analyze and process attached file: ${attachments.map((a) => a.name).join(", ")}`;
+    const userMsg: ChatMessage = { id: `user-${Date.now()}`, sender: "user", content: promptText };
 
     setInputText("");
     setMessages((prev) => [...prev, userMsg]);
 
-    const isTauri =
-      typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
-    if (!isTauri) {
-      const assistantId = `assistant-${Date.now()}`;
-      const assistantMsg: ChatMessage = {
-        id: assistantId,
-        sender: "assistant",
-        model: "resolving...",
-        content: "Browser mock mode: stdio RPC requires Tauri runtime.",
-        isStreaming: false,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+    if (!(typeof window !== "undefined" && "__TAURI_INTERNALS__" in window)) {
+      setMessages((prev) => [...prev, {
+        id: `assistant-${Date.now()}`, sender: "assistant", model: "resolving...",
+        content: "Browser mock mode: stdio RPC requires Tauri runtime.", isStreaming: false,
+      }]);
       return;
     }
 
     try {
       const { invoke } = await import("@tauri-apps/api/core");
-      const apiMessages = [...messages, userMsg].map((m) => ({
-        role: m.sender,
-        content: m.content,
-      }));
-
+      const apiMessages = [...messages, userMsg].map((m) => ({ role: m.sender, content: m.content }));
       const streamId = await invoke<number>("send_chat_message", {
         params: {
           messages: apiMessages,
-          attachments: attachments.map((a) => ({
-            name: a.name,
-            filename: a.name,
-            path: a.path,
-          })),
+          attachments: attachments.map((a) => ({ name: a.name, filename: a.name, path: a.path })),
           planFirst,
+          ragMode,
           projectId: activeProject?.id || "default-project",
           projectPath: activeProject?.path || undefined,
           sessionId: currentSessionId,
@@ -159,46 +113,23 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
       setActiveStreamId(streamId);
       userScrolledUpRef.current = false;
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-
-      const assistantMsg: ChatMessage = {
-        id: String(streamId),
-        sender: "assistant",
-        model: "routing...",
-        content: "",
-        thinking: "",
-        isStreaming: true,
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => [...prev, {
+        id: String(streamId), sender: "assistant", model: "routing...", content: "", thinking: "", isStreaming: true,
+      }]);
     } catch (err) {
       console.error("Failed to send chat message:", err);
-      const errorMsg: ChatMessage = {
-        id: `err-${Date.now()}`,
-        sender: "assistant",
-        model: "error",
-        content: `Error invoking chat stream: ${String(err)}`,
-        isStreaming: false,
-        interrupted: true,
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, {
+        id: `err-${Date.now()}`, sender: "assistant", model: "error", content: `Error invoking chat stream: ${String(err)}`,
+        isStreaming: false, interrupted: true,
+      }]);
     }
   };
 
-  const handlePermissionRespond = async (
-    requestId: string,
-    option: PermissionOption,
-    chosenPattern?: string
-  ) => {
-    const isTauri =
-      typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-    if (isTauri) {
+  const handlePermissionRespond = async (requestId: string, option: PermissionOption, chosenPattern?: string) => {
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("respond_permission", {
-          requestId,
-          selectedOption: option,
-          resourcePattern: chosenPattern,
-        });
+        await invoke("respond_permission", { requestId, selectedOption: option, resourcePattern: chosenPattern });
       } catch (err) {
         console.error("Failed to respond to permission request:", err);
       }
@@ -208,9 +139,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
   const handleRunPlan = async () => {
     if (!activePlanSteps || activePlanSteps.length === 0) return;
-    const isTauri =
-      typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-    if (isTauri) {
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const streamId = await invoke<number>("run_plan", {
@@ -219,19 +148,11 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
           projectPath: activeProject?.path || undefined,
           steps: activePlanSteps,
         });
-
         setActiveStreamId(streamId);
         setActivePlanSteps(null);
-
-        const assistantMsg: ChatMessage = {
-          id: String(streamId),
-          sender: "assistant",
-          model: "executing plan...",
-          content: "",
-          thinking: "",
-          isStreaming: true,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => [...prev, {
+          id: String(streamId), sender: "assistant", model: "executing plan...", content: "", thinking: "", isStreaming: true,
+        }]);
         userScrolledUpRef.current = false;
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       } catch (err) {
@@ -267,13 +188,20 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
           <span className="font-bold text-[#4C8DF6]">CONVERSATION</span>
           {activeRouting && (
             <span className="px-2 py-0.5 bg-[#263241] rounded-[4px] text-[#10B981] text-[11px]">
-              [{activeRouting.modelTag} •{" "}
-              {Math.round(activeRouting.confidence * 100)}% •{" "}
-              {activeRouting.taskClass}]
+              [{activeRouting.modelTag} • {Math.round(activeRouting.confidence * 100)}% • {activeRouting.taskClass}]
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 cursor-pointer text-[12px] select-none text-[#8B949E]">
+            <input
+              type="checkbox"
+              checked={ragMode}
+              onChange={(e) => setRagMode(e.target.checked)}
+              className="rounded-[2px] bg-[#0B0F14] border-[#263241] text-[#10B981] focus:ring-0"
+            />
+            <span className={ragMode ? "text-[#10B981] font-mono font-medium" : ""}>RAG Mode</span>
+          </label>
           <label className="flex items-center gap-1.5 cursor-pointer text-[12px] select-none text-[#8B949E]">
             <input
               type="checkbox"
@@ -362,11 +290,24 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
           >
             <Paperclip className="w-4 h-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => setRagMode((prev) => !prev)}
+            title={ragMode ? "RAG Retrieval Mode Active (Vectors + FTS5)" : "Enable Knowledge Base RAG Retrieval"}
+            className={`px-2.5 py-1.5 rounded-[4px] border font-mono text-[12px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 select-none ${
+              ragMode
+                ? "bg-[#10B981]/20 border-[#10B981] text-[#10B981] shadow-sm"
+                : "bg-[#0B0F14] border-[#263241] text-[#8B949E] hover:text-[#E6EDF3] hover:border-[#4C8DF6]"
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>{ragMode ? "RAG ON" : "RAG"}</span>
+          </button>
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter prompt or operational query..."
+            placeholder={ragMode ? "Query indexed knowledge base documents..." : "Enter prompt or operational query..."}
             rows={2}
             className="flex-1 bg-[#0B0F14] border border-[#263241] rounded-[4px] p-2 text-[13px] text-[#E6EDF3] placeholder-[#8B949E] resize-none focus:outline-none focus:border-[#4C8DF6] font-sans"
           />
@@ -375,7 +316,8 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             <button
               type="button"
               onClick={handleStop}
-              className="px-3 py-2 bg-[#EF4444]/20 border border-[#EF4444]/40 text-[#EF4444] rounded-[4px] font-mono text-[12px] font-semibold hover:bg-[#EF4444]/30 flex items-center gap-1.5 transition-colors cursor-pointer select-none shrink-0"
+              title="Stop agent generation in progress"
+              className="px-3.5 py-2 bg-[#EF4444]/20 border border-[#EF4444] text-[#EF4444] rounded-[4px] font-mono text-[12px] font-bold hover:bg-[#EF4444]/30 flex items-center gap-1.5 transition-colors cursor-pointer select-none shrink-0"
             >
               <Square className="w-3.5 h-3.5 fill-[#EF4444]" />
               Stop
@@ -385,7 +327,8 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
               type="button"
               onClick={handleSend}
               disabled={!inputText.trim() && attachments.length === 0}
-              className="px-3 py-2 bg-[#4C8DF6]/20 border border-[#4C8DF6]/40 text-[#4C8DF6] disabled:opacity-40 disabled:cursor-not-allowed rounded-[4px] font-mono text-[12px] font-semibold hover:bg-[#4C8DF6]/30 flex items-center gap-1.5 transition-colors cursor-pointer select-none shrink-0"
+              title="Send prompt"
+              className="px-3.5 py-2 bg-[#4C8DF6]/20 border border-[#4C8DF6]/50 text-[#4C8DF6] disabled:opacity-40 disabled:cursor-not-allowed rounded-[4px] font-mono text-[12px] font-bold hover:bg-[#4C8DF6]/30 flex items-center gap-1.5 transition-colors cursor-pointer select-none shrink-0"
             >
               <Send className="w-3.5 h-3.5" />
               Send

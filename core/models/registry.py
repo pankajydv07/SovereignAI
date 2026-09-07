@@ -22,15 +22,29 @@ class Role(StrEnum):
     CLASSIFIER = "classifier"
 
 
-class NoModelForRoleError(Exception):
+class NoAvailableModelForRole(Exception):
+    """Raised when no installed or configured model exists for a requested role."""
+
+    def __init__(self, role: str, capability: str | None = None, required_tag: str | None = None) -> None:
+        self.role = role
+        self.capability = capability
+        self.required_tag = required_tag
+        msg = f"No model available for role '{role}'"
+        if capability:
+            msg += f" (capability: '{capability}')"
+        if required_tag:
+            msg += f". Run `ollama pull {required_tag}`."
+        else:
+            msg += ". Please configure a model tag in models.yaml."
+        super().__init__(msg)
+
+
+class NoModelForRoleError(NoAvailableModelForRole):
     """Raised when no model tag is configured or resolved for a role."""
 
-    def __init__(self, role: str, available_roles: list[str]) -> None:
-        super().__init__(
-            f"No model configured for role '{role}'. Available roles: {available_roles}"
-        )
-        self.role = role
-        self.available_roles = available_roles
+    def __init__(self, role: str, available_roles: list[str] | None = None) -> None:
+        super().__init__(role)
+        self.available_roles = available_roles or []
 
 
 class ModelNotInstalledError(Exception):
@@ -56,6 +70,8 @@ class ModelRegistry:
         self.config_path = Path(config_path)
         self._roles: dict[str, list[str]] = {}
         self._overrides: dict[str, dict[str, Any]] = {}
+        self.margin_floor: float = 0.015
+        self.scoring_weights: dict[str, float] = {}
         self.load_config()
 
     def load_config(self) -> None:
@@ -71,6 +87,9 @@ class ModelRegistry:
         self._roles = data.get("roles", {})
         self._overrides = data.get("overrides", {})
         self._priors = data.get("priors", {})
+        routing_cfg = data.get("routing", {})
+        self.margin_floor = float(routing_cfg.get("margin_floor", 0.015))
+        self.scoring_weights = routing_cfg.get("weights", {})
 
     def resolve(self, role: str | Role) -> str:
         """Resolve a Role to its configured candidate model tag.
@@ -84,6 +103,10 @@ class ModelRegistry:
             raise NoModelForRoleError(role_str, list(self._roles.keys()))
 
         return candidates[0]
+
+    def get_primary(self, role: str | Role) -> str:
+        """Alias for resolve() returning the primary model tag for a role."""
+        return self.resolve(role)
 
     def get_overrides(self, model_tag: str) -> dict[str, Any]:
         """Get model overrides (num_ctx, temperature, keep_alive) for a model tag."""

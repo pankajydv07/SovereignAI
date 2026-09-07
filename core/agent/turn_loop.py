@@ -9,6 +9,7 @@ from typing import Any
 import uuid
 
 from agent.budget import RunBudgetTracker, StopReason
+from agent.doc_intent import REFUSAL_MARKERS, detect_doc_generation_request, get_fallback_doc_markdown
 from agent.policy import PolicyEngine
 from agent.tool_executor import handle_tool_call
 from models.ollama import OllamaApiError, OllamaClient
@@ -120,11 +121,13 @@ class TurnLoop:
             "You have direct access to tools to inspect and operate on workspace files:\n"
             "- Use `glob` or `fs_list` to search and find files in the workspace.\n"
             "- Use `fs_read` to read any workspace file (it automatically converts Excel .xlsx/.csv spreadsheets, Word .docx, PPT .pptx, and PDF documents into clean Markdown tables and text).\n"
+            "- Use `kb_search` to query the air-gapped industrial knowledge base (API 570, ASME Section VIII, IS standards, OISD rules, statutory plant guidelines).\n"
             "- Use `fs_write` to save output text files.\n"
-            "- Use `generate_document` to create and generate `.pdf`, `.docx`, `.xlsx`, `.pptx`, and `.md` files directly in the workspace. Whenever the user asks to generate, create, or export a report, summary, presentation, slide deck, document, or PDF, invoke `generate_document` (or `render_deliverable` for official PSU approval notes/memorandums/review decks) with `outputFormat` and `outputFilename`. Do not write the generating code in your chat reply.\n"
+            "- Use `generate_document` ONLY when the user explicitly asks to generate, create, or export a file (such as `.pdf`, `.docx`, `.xlsx`, `.pptx`).\n"
+            "- For questions, explanations, engineering calculations, and RAG inquiries, provide clear technical answers directly in chat. Do NOT attempt to generate a document unless explicitly instructed by the user.\n"
             "CRITICAL:\n"
             "1. Never state or claim that you cannot open, view, or read binary files, Excel workbooks, or workspace files. Immediately invoke `glob` or `fs_read`.\n"
-            "2. Never state or claim that you cannot generate or produce PDF deliverables, presentations, or documents directly from the workspace. Always call `generate_document` with `outputFormat='pptx'` (or `'pdf'` / `'docx'`) to create the file directly."
+            "2. When answering standards or engineering queries, provide the exact clauses, formulas, and technical values in your response."
         )
 
         def get_ollama_messages() -> list[dict[str, Any]]:
@@ -228,21 +231,8 @@ class TurnLoop:
 
             if not tool_calls:
                 # Intercept model hallucinations claiming it cannot read workspace / binary files
-                refusal_markers = (
-                    "can't open or read binary",
-                    "cannot open or read binary",
-                    "can't read binary",
-                    "cannot read binary",
-                    "sandbox doesn't expose",
-                    "sandbox does not expose",
-                    "don't have a way to view",
-                    "do not have a way to view",
-                    "cannot access local files",
-                    "can't access local files",
-                    "as an ai, i cannot",
-                )
                 lowered_c = content.lower()
-                if any(rm in lowered_c for rm in refusal_markers) and shared_repair_attempts < self.MAX_REPAIR_ATTEMPTS:
+                if any(rm in lowered_c for rm in REFUSAL_MARKERS) and shared_repair_attempts < self.MAX_REPAIR_ATTEMPTS:
                     shared_repair_attempts += 1
                     messages.pop()  # Discard the refusal response
                     err_msg = (
@@ -252,26 +242,28 @@ class TurnLoop:
                     messages.append({"role": "user", "content": err_msg})
                     continue
 
-                # Intercept presentation, spreadsheet, and document requests where model emitted text/markdown without calling tool
+                # Intercept explicit document/presentation/spreadsheet requests where model emitted text without calling tool
                 current_user_prompt = ""
                 for m in reversed(messages):
                     if m.get("role") == "user":
-                        current_user_prompt = m.get("content", "")
-                        break
-                lowered_user = current_user_prompt.lower()
-                has_xlsx = any(kw in lowered_user for kw in ("xlsx", "excel", "spreadsheet", "csv", ".xlsx", "workbook", "sheets", "cost sheet"))
-                has_pptx = any(kw in lowered_user for kw in ("pptx", "presentation", "slide deck", "slides from", "review deck", "make slides", "powerpoint", "slides on", "slides about", ".pptx"))
-                has_pdf = any(kw in lowered_user for kw in ("generate pdf", "create pdf", "export pdf", ".pdf", "pdf report"))
-                has_docx = any(kw in lowered_user for kw in ("generate docx", "create docx", "export docx", ".docx", "word document", "word doc"))
+                        text = m.get("content", "")
+                        if not text.startswith(("Instruction:", "Step requirement error", "Tool call error")):
+                            current_user_prompt = text
+                            break
 
-                if has_xlsx or has_pptx or has_pdf or has_docx:
-                    target_fmt = "xlsx" if has_xlsx else ("pptx" if has_pptx else ("pdf" if has_pdf else "docx"))
-                    fn_match = re.search(r'([a-zA-Z0-9_\-]+\.(?:xlsx|pptx|pdf|docx))', current_user_prompt, re.IGNORECASE)
-                    if fn_match:
-                        target_fn = fn_match.group(1)
-                    else:
-                        target_fn = f"data.{target_fmt}" if target_fmt == "xlsx" else (f"presentation.{target_fmt}" if target_fmt == "pptx" else f"report.{target_fmt}")
+                is_denied = any(
+                    "permission denied" in str(m.get("content", "")).lower()
+                    or "permission was denied" in str(m.get("content", "")).lower()
+                    or "operation stopped" in str(m.get("content", "")).lower()
+                    or m.get("denied", False)
+                    for m in messages
+                )
+                if not is_denied:
+                    is_doc_req, target_fmt, target_fn = detect_doc_generation_request(current_user_prompt)
+                else:
+                    is_doc_req = False
 
+                if is_doc_req:
                     script_match = re.search(r"```python\s*([\s\S]*?)\s*```", content)
                     code_to_exec = script_match.group(1) if script_match else (content if any(s in content for s in ("prs.save", "doc.save", "wb.save", "save(")) else None)
 
@@ -279,24 +271,7 @@ class TurnLoop:
                     is_generic_greeting = any(g in cleaned_md.lower() for g in ("how can i help", "how can i assist", "how may i help", "hello!", "hy how", "hey!"))
                     if is_generic_greeting or len(cleaned_md) < 20:
                         topic = current_user_prompt.strip().split("\n")[0][:60]
-                        if target_fmt == "xlsx":
-                            cleaned_md = (
-                                f"# {topic}\n\n"
-                                f"| Item | Description | Parameter | Value | Unit | Status |\n"
-                                f"|---|---|---|---|---|---|\n"
-                                f"| 1 | Baseline Inspection | Operating Pressure | 14.5 | bar | Normal |\n"
-                                f"| 2 | Thickness Measurement | Shell Wall | 12.8 | mm | Acceptable |\n"
-                                f"| 3 | Corrosion Assessment | Rate | 0.12 | mm/yr | Low Risk |\n"
-                                f"| 4 | Temperature Monitoring | Skin Temp | 245.0 | deg C | Normal |"
-                            )
-                        else:
-                            cleaned_md = (
-                                f"# {topic}\n\n"
-                                f"## Executive Summary\n- Key objectives, operational scope, and background\n- Applicable PSU standards and regulatory compliance\n\n"
-                                f"## Findings & Technical Analysis\n- Inspection observations and baseline measurements\n- Quantitative parameters and asset integrity evaluation\n\n"
-                                f"## Risk Assessment & Mitigation\n- High-priority vulnerabilities and hazard classification\n- Preventive maintenance and risk control barriers\n\n"
-                                f"## Recommendations & Action Plan\n- Corrective actions, owner allocation, and target timelines\n- Verification milestones and closure protocol"
-                            )
+                        cleaned_md = get_fallback_doc_markdown(target_fmt, topic)
 
                     tool_calls = [{
                         "id": f"call_{uuid.uuid4().hex[:8]}",
@@ -340,6 +315,18 @@ class TurnLoop:
                     tool_errors.append(err)
                 elif obs:
                     executed_tools.append(obs)
+                if obs and obs.get("denied"):
+                    break
+
+            user_denied = [obs for obs in executed_tools if obs.get("denied")]
+            if user_denied:
+                messages.extend(executed_tools)
+                denied_tools = ", ".join(obs.get("tool_name", "tool") for obs in user_denied)
+                deny_msg = f"Operation stopped: Permission was denied by the user for '{denied_tools}'."
+                if on_token:
+                    await on_token(deny_msg, "")
+                messages.append({"role": "assistant", "content": deny_msg, "denied": True})
+                return StopReason.END_TURN, messages
 
             if tool_errors:
                 if shared_repair_attempts < self.MAX_REPAIR_ATTEMPTS:

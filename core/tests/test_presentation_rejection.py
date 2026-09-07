@@ -1,12 +1,15 @@
 """Test suite for presentation requests classification, generation, and governance."""
 
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
+import numpy as np
 import pytest
 from pptx import Presentation
 
 from agent.budget import RunBudget, RunBudgetTracker
 from agent.turn_loop import TurnLoop
+from kb.embedder import ChunkEmbedder
 from models.registry import ModelRegistry
 from models.router import ModelRouter, TaskClass
 from renderers.governance import (
@@ -20,11 +23,30 @@ from tools.registry import ToolRegistry
 from tools.render_deliverable import RenderDeliverableInput, RenderDeliverableTool
 
 
+def _get_mock_embedder() -> AsyncMock:
+    fixture_path = Path(__file__).resolve().parent / "fixtures" / "router_test_embeddings.json"
+    with open(fixture_path, encoding="utf-8") as f:
+        embeddings = json.load(f)
+
+    mock = AsyncMock(spec=ChunkEmbedder)
+    mock.model = "nomic-embed-text:latest"
+    mock.ollama_url = "http://127.0.0.1:11434"
+
+    async def _embed_single(text: str) -> np.ndarray:
+        if text in embeddings:
+            return np.array(embeddings[text], dtype=np.float32)
+        return np.array(next(iter(embeddings.values())), dtype=np.float32)
+
+    mock.embed_single_text.side_effect = _embed_single
+    return mock
+
+
 @pytest.mark.asyncio
 async def test_presentation_requests_classify_as_official_drafting():
     """Verify presentation requests route to official_drafting without a separate task class."""
     registry = ModelRegistry()
-    router = ModelRouter(registry)
+    mock_embedder = _get_mock_embedder()
+    router = ModelRouter(registry, embedder=mock_embedder)
 
     presentation_prompts = [
         "create a management review deck",
@@ -61,8 +83,8 @@ async def test_generate_document_pptx_success(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_render_deliverable_review_deck_success(tmp_path):
-    """Verify render_deliverable successfully generates review_deck.pptx with citations and provenance."""
+async def test_render_deliverable_review_deck_release2_notice(tmp_path):
+    """Verify render_deliverable for review_deck explicitly returns the Release 2 deferral notice."""
     tool = RenderDeliverableTool()
     ctx = ToolContext(workspace_root=tmp_path)
 
@@ -88,11 +110,9 @@ async def test_render_deliverable_review_deck_success(tmp_path):
         ),
         ctx,
     )
-    assert res.success
-    assert Path(res.output.file_path).exists()
-    prs = Presentation(res.output.file_path)
-    assert len(prs.slides) >= 3  # Title, Content, and Final Provenance Slide
-    assert "Quarterly Plant Asset Review" in prs.slides[0].shapes.title.text
+    assert not res.success
+    assert "Governed review decks are not yet available" in res.error
+    assert "cannot enter the approval workflow" in res.error
 
 
 def test_governance_boundary_protects_official_review_deck():

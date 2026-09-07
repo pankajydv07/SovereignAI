@@ -124,6 +124,50 @@
         "state": { "type": "string" }
       }
     },
+    "AttachmentIndexStartedPayload": {
+      "type": "object",
+      "required": ["type", "documentId", "filename", "pageCount"],
+      "properties": {
+        "type": { "type": "string", "const": "attachment_index_started" },
+        "documentId": { "type": "string" },
+        "filename": { "type": "string" },
+        "pageCount": { "type": "integer" }
+      }
+    },
+    "AttachmentIndexProgressPayload": {
+      "type": "object",
+      "required": ["type", "documentId", "stage", "current", "total"],
+      "properties": {
+        "type": { "type": "string", "const": "attachment_index_progress" },
+        "documentId": { "type": "string" },
+        "stage": { "type": "string" },
+        "current": { "type": "integer" },
+        "total": { "type": "integer" }
+      }
+    },
+    "AttachmentIndexCompletedPayload": {
+      "type": "object",
+      "required": ["type", "status", "documentId", "chunkCount", "pageCount", "requiredOcr", "lowConfidenceFieldCount"],
+      "properties": {
+        "type": { "type": "string", "const": "attachment_index_completed" },
+        "status": { "type": "string" },
+        "documentId": { "type": "string" },
+        "chunkCount": { "type": "integer" },
+        "pageCount": { "type": "integer" },
+        "requiredOcr": { "type": "boolean" },
+        "lowConfidenceFieldCount": { "type": "integer" }
+      }
+    },
+    "AttachmentIndexFailedPayload": {
+      "type": "object",
+      "required": ["type", "documentId", "reason", "directReadSucceeded"],
+      "properties": {
+        "type": { "type": "string", "const": "attachment_index_failed" },
+        "documentId": { "type": "string" },
+        "reason": { "type": "string" },
+        "directReadSucceeded": { "type": "boolean" }
+      }
+    },
     "SessionUpdateNotification": {
       "type": "object",
       "required": ["sessionId", "update"],
@@ -137,7 +181,11 @@
             { "$ref": "#/definitions/PlanUpdatePayload" },
             { "$ref": "#/definitions/DiffUpdatePayload" },
             { "$ref": "#/definitions/TerminalUpdatePayload" },
-            { "$ref": "#/definitions/StateChangeUpdatePayload" }
+            { "$ref": "#/definitions/StateChangeUpdatePayload" },
+            { "$ref": "#/definitions/AttachmentIndexStartedPayload" },
+            { "$ref": "#/definitions/AttachmentIndexProgressPayload" },
+            { "$ref": "#/definitions/AttachmentIndexCompletedPayload" },
+            { "$ref": "#/definitions/AttachmentIndexFailedPayload" }
           ]
         },
         "meta": { "$ref": "meta.json#/definitions/SwarajMeta" }

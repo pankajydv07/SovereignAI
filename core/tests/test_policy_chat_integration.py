@@ -11,7 +11,7 @@ import pytest
 from agent.budget import RunBudget, RunBudgetTracker
 from agent.policy import PolicyDecision, PolicyEngine
 from agent.resources import compute_default_resource_pattern, extract_resource_string
-from agent.turn_loop import TurnLoop
+from agent.turn_loop import StopReason, TurnLoop
 from tools.base import BaseTool, SideEffect, ToolContext, ToolKind, ToolResult
 from tools.fs_read import FsReadTool
 from tools.fs_write import FsWriteTool
@@ -248,3 +248,66 @@ async def test_permission_approval_roundtrip(
     )
     assert dec == PolicyDecision.AUTO
     assert pat == "docs/**"
+
+
+@pytest.mark.asyncio
+async def test_permission_denial_immediate_halt() -> None:
+    """Test that when permission is denied, turn loop stops immediately and doesn't execute further tools."""
+    policy_engine = PolicyEngine()
+    budget_tracker = RunBudgetTracker(RunBudget(max_steps=5, max_run_tokens=4000))
+    reg = ToolRegistry()
+    reg.register(DummyWriteTool())
+
+    mock_ollama = AsyncMock()
+
+    async def mock_stream(*args: Any, **kwargs: Any) -> AsyncGenerator[dict[str, Any], None]:
+        yield {
+            "message": {
+                "tool_calls": [
+                    {
+                        "function": {
+                            "name": "dummy_write",
+                            "arguments": {"path": "confidential.txt", "content": "secret"},
+                        }
+                    },
+                    {
+                        "function": {
+                            "name": "dummy_write",
+                            "arguments": {"path": "second.txt", "content": "secret2"},
+                        }
+                    },
+                ]
+            },
+            "done": True,
+        }
+
+    mock_ollama.stream_chat = mock_stream
+    permission_request_count = 0
+
+    async def mock_deny_requester(
+        tool: str, side_effect: str, desc: str, res: str, project_id: str
+    ) -> tuple[str, str | None]:
+        nonlocal permission_request_count
+        permission_request_count += 1
+        return "deny", None
+
+    loop = TurnLoop(
+        ollama_client=mock_ollama,
+        tool_registry=reg,
+        budget_tracker=budget_tracker,
+        policy_engine=policy_engine,
+        permission_requester=mock_deny_requester,
+    )
+
+    stop_reason, messages = await loop.run_step(
+        session_id="test-session-deny",
+        model_tag="test-model",
+        messages=[{"role": "user", "content": "write to confidential.txt"}],
+        project_id="proj1",
+    )
+
+    # Permission must be requested exactly ONCE (not looped for second tool call)
+    assert permission_request_count == 1
+    assert stop_reason == StopReason.END_TURN
+    assert any("Permission was denied by the user for 'dummy_write'" in m.get("content", "") for m in messages)
+

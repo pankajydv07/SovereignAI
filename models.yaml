@@ -40,7 +40,7 @@ routing:
     vision_ocr: vision
     kb_qa: writer
     other: planner
-  confidence_floor: 0.55
+  margin_floor: 0.015
   max_tools_exposed: 6
   escalate_on_verifier_failure: true
   max_escalations: 1

@@ -23,8 +23,8 @@ class ToolRegistry:
         "render": ["fs_read", "fs_write", "render_deliverable"],
         "kb_qa": ["fs_read", "fs_list", "kb_search", "fs_write"],
         "vision_ocr": ["fs_read", "fs_list", "glob", "doc_ingest"],
-        "other": ["fs_read", "fs_list", "glob", "fs_write", "generate_document"],
-        "default": ["fs_read", "fs_list", "glob", "fs_write", "generate_document"],
+        "other": ["fs_read", "fs_list", "glob", "kb_search", "fs_write", "generate_document"],
+        "default": ["fs_read", "fs_list", "glob", "kb_search", "fs_write", "generate_document"],
     }
 
     MAX_TOOLS_PER_TASK: int = 6

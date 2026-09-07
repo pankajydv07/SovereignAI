@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from kb.embedder import ChunkEmbedder, EmbeddingModelUnavailable
-from models.registry import ModelRegistry
+from models.registry import ModelRegistry, NoAvailableModelForRole
 from models.router import (
     ClassifierNotInitialisedError,
     EmbeddingCentroidClassifier,
@@ -34,11 +34,37 @@ def load_dataset(filename: str) -> list[dict]:
     return items
 
 
+def load_test_embeddings() -> dict[str, list[float]]:
+    """Load cached nomic-embed-text embeddings from test fixture."""
+    fixture_path = Path(__file__).resolve().parent / "fixtures" / "router_test_embeddings.json"
+    with open(fixture_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def create_fixture_embedder(embeddings: dict[str, list[float]]) -> AsyncMock:
+    """Create a mock ChunkEmbedder backed by real cached nomic-embed-text embeddings."""
+    mock = AsyncMock(spec=ChunkEmbedder)
+    mock.model = "nomic-embed-text:latest"
+    mock.ollama_url = "http://127.0.0.1:11434"
+
+    async def _embed_single(text: str) -> np.ndarray:
+        if text in embeddings:
+            return np.array(embeddings[text], dtype=np.float32)
+        # Fallback to first vector if prompt unknown in mock test
+        first_vec = next(iter(embeddings.values()))
+        return np.array(first_vec, dtype=np.float32)
+
+    mock.embed_single_text.side_effect = _embed_single
+    return mock
+
+
 @pytest.mark.asyncio
 async def test_zero_keyword_paraphrase_routing():
     """Verify router accuracy on zero-keyword paraphrases using nomic-embed-text centroids."""
     registry = ModelRegistry()
-    router = ModelRouter(registry)
+    fixture_embeds = load_test_embeddings()
+    mock_embedder = create_fixture_embedder(fixture_embeds)
+    router = ModelRouter(registry, embedder=mock_embedder)
 
     paraphrase_cases = [
         ("create an executive brief", TaskClass.DOC_SUMMARISE),
@@ -58,10 +84,10 @@ async def test_zero_keyword_paraphrase_routing():
 
     for prompt, expected_class in paraphrase_cases:
         decision = await router.route(prompt)
-        # Verify prediction matches or falls back gracefully to planner/other
         assert decision.task_class == expected_class, (
             f"Expected {expected_class} for '{prompt}', got {decision.task_class} (conf={decision.confidence:.3f})"
         )
+        assert decision.confidence_band in ("CONFIDENT", "UNCERTAIN")
 
 
 @pytest.mark.asyncio
@@ -245,3 +271,25 @@ async def test_missing_capability_degraded_status(tmp_path):
     assert decision.task_class == TaskClass.VISION_OCR
     assert decision.degraded_reason is not None
     assert "ollama pull missing-vision-tag:latest" in decision.degraded_reason
+
+
+def test_no_available_model_for_role_raises(tmp_path):
+    """Assert NoAvailableModelForRole is raised when role has no candidate and no silent substitution occurs."""
+    config_file = tmp_path / "models.yaml"
+    config_file.write_text(
+        "roles:\n"
+        "  embedder:\n"
+        "    - nomic-embed-text:latest\n"
+        "overrides: {}\n",
+        encoding="utf-8",
+    )
+    registry = ModelRegistry(config_file)
+    with pytest.raises(NoAvailableModelForRole) as exc_info:
+        registry.get_primary("vision")
+
+    assert exc_info.value.role == "vision"
+    assert "No model available for role 'vision'" in str(exc_info.value)
+    # Ensure nothing was silently substituted and resolve also fails loudly
+    with pytest.raises(NoAvailableModelForRole):
+        registry.resolve("vision")
+

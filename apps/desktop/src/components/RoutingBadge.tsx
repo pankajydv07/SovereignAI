@@ -17,6 +17,7 @@ export interface RoutingDecisionPayload {
   selectedModelTag: string;
   fallbackModelTag: string;
   confidence: number;
+  confidenceBand?: string;
   routingLatencyMs: number;
   isManualOverride: boolean;
   degradedReason?: string | null;
@@ -33,6 +34,7 @@ export interface RoutingBadgeProps {
   role: string;
   model: string;
   confidence?: number;
+  confidenceBand?: string;
   latencyMs?: number;
   latencySeconds?: number;
   isManualOverride?: boolean;
@@ -44,6 +46,7 @@ export const RoutingBadge: React.FC<RoutingBadgeProps> = ({
   role,
   model,
   confidence = 0.98,
+  confidenceBand,
   latencyMs,
   latencySeconds,
   isManualOverride = false,
@@ -55,6 +58,9 @@ export const RoutingBadge: React.FC<RoutingBadgeProps> = ({
   const dotColor = getModelTagTint(model);
   const effectiveOverride = isManualOverride || (decision ? decision.isManualOverride : false);
   const effectiveConfidence = decision ? decision.confidence : confidence;
+  const isConfident = decision?.confidenceBand
+    ? decision.confidenceBand === "CONFIDENT"
+    : (confidenceBand ? confidenceBand === "CONFIDENT" : effectiveConfidence >= 0.015);
   const effectiveLatency = decision
     ? decision.routingLatencyMs
     : latencyMs !== undefined
@@ -75,7 +81,7 @@ export const RoutingBadge: React.FC<RoutingBadgeProps> = ({
       rejectionReason: null,
     },
     {
-      modelTag: "qwen3-coder:30b",
+      modelTag: "qwen2.5-coder:7b",
       qualityPrior: 0.85,
       vramFit: 0.8,
       latencyScore: 0.7,
@@ -118,8 +124,11 @@ export const RoutingBadge: React.FC<RoutingBadgeProps> = ({
             MANUAL OVERRIDE
           </span>
         ) : (
-          <span data-testid="confidence-val" className="tabular-nums text-[#10B981] font-semibold">
-            {effectiveConfidence.toFixed(2)}
+          <span
+            data-testid="confidence-val"
+            className={`tabular-nums font-semibold ${isConfident ? "text-[#10B981]" : "text-[#F59E0B]"}`}
+          >
+            {isConfident ? "CONFIDENT" : "UNCERTAIN"}
           </span>
         )}
 

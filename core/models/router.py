@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 
 from kb.embedder import ChunkEmbedder, EmbeddingModelUnavailable
-from models.registry import ModelRegistry, NoModelForRoleError, Role
+from models.registry import ModelRegistry, NoAvailableModelForRole, NoModelForRoleError, Role
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +66,7 @@ class RoutingDecision:
     selected_model_tag: str
     fallback_model_tag: str
     confidence: float
+    confidence_band: str
     routing_latency_ms: float
     feature_vector: dict[str, Any]
     candidates: list[CandidateScore]
@@ -124,12 +125,12 @@ class EmbeddingCentroidClassifier:
 
     def predict(
         self,
-        embedding: list[float],
+        embedding: list[float] | np.ndarray,
         margin_floor: float = 0.015,
         min_cosine_floor: float = 0.45,
     ) -> tuple[str, float]:
         """Predict task class and margin confidence from a normalized embedding vector."""
-        if not embedding or len(embedding) != self.EXPECTED_DIM:
+        if embedding is None or len(embedding) != self.EXPECTED_DIM:
             return TaskClass.OTHER, 0.0
 
         q = np.array(embedding, dtype=np.float32)
@@ -167,12 +168,14 @@ class ModelRouter:
         embedder: ChunkEmbedder | None = None,
         centroids_path: Path | str | None = None,
         weights: dict[str, float] | None = None,
-        confidence_floor: float = 0.015,
+        confidence_floor: float | None = None,
     ) -> None:
         self.registry = registry
         self.embedder = embedder or ChunkEmbedder(model_registry=registry)
         self.classifier = EmbeddingCentroidClassifier(centroids_path=centroids_path)
-        self.confidence_floor = confidence_floor
+        self.confidence_floor = (
+            confidence_floor if confidence_floor is not None else getattr(self.registry, "margin_floor", 0.015)
+        )
 
         default_weights = {
             "w1_quality": 0.40,
@@ -180,7 +183,7 @@ class ModelRouter:
             "w3_latency": 0.15,
             "w4_swap_penalty": 0.20,
         }
-        self.weights = weights or default_weights
+        self.weights = weights or getattr(self.registry, "scoring_weights", {}) or default_weights
 
     async def self_test(self) -> None:
         """Startup self-test distinguishing missing centroids from unreachable Ollama."""
@@ -254,21 +257,17 @@ class ModelRouter:
             TaskClass.OTHER: Role.PLANNER,
         }
         target_role = role_mapping.get(task_class, Role.PLANNER)
-
         candidate_tags = self.registry._roles.get(target_role.value, [])
         degraded_reason = None
 
         if not candidate_tags:
-            try:
-                candidate_tags = [self.registry.resolve(Role.PLANNER)]
-            except NoModelForRoleError:
-                candidate_tags = ["qwen3:30b"]
+            raise NoAvailableModelForRole(role=target_role.value, capability=task_class)
 
-        primary_tag = candidate_tags[0] if candidate_tags else "qwen3:30b"
+        primary_tag = candidate_tags[0]
         if primary_tag not in installed and installed:
             degraded_reason = (
                 f"Role '{target_role.value}' model '{primary_tag}' is not installed. "
-                f"Run: ollama pull {primary_tag}"
+                f"Run: `ollama pull {primary_tag}`"
             )
 
         w1 = self.weights.get("w1_quality", 0.40)
@@ -343,16 +342,18 @@ class ModelRouter:
         else:
             try:
                 fallback_model = self.registry.resolve(Role.PLANNER)
-            except NoModelForRoleError:
+            except (NoModelForRoleError, NoAvailableModelForRole):
                 fallback_model = primary_tag
 
         latency_ms = (time.perf_counter() - t0) * 1000.0
+        confidence_band = "CONFIDENT" if confidence >= self.confidence_floor else "UNCERTAIN"
 
         return RoutingDecision(
             task_class=task_class,
             selected_model_tag=selected_model,
             fallback_model_tag=fallback_model,
             confidence=confidence,
+            confidence_band=confidence_band,
             routing_latency_ms=round(latency_ms, 2),
             feature_vector=features,
             candidates=candidate_objects,

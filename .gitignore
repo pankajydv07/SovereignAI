@@ -2,32 +2,55 @@
 node_modules/
 apps/desktop/node_modules/
 .pnpm-store/
+.npm/
+.yarn/
 
 # Frontend build output
 apps/desktop/dist/
 apps/desktop/.vite/
+dist/
+build/
+.turbo/
+.cache/
 
 # Tauri and Rust build output
 apps/desktop/src-tauri/target/
 target/
 **/*.rs.bk
 
+# Local binaries and deliverables output
+bin/
+out/
+deliverables/
+libreoffice/
+**/libreoffice/
+*LibreOffice*/
+.~lock.*#
+~lock.*#
+
 # Python environments and caches
 .venv/
 core/.venv/
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
 .coverage
 htmlcov/
+.tmp-pytest/
+tmp/
+temp/
+*.tmp
 
-# Local application state
+# Local application state & databases
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
 sessions.db
 
 # Environment and secrets
@@ -38,6 +61,10 @@ sessions.db
 # Logs
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Generated bundles and archives
 *.zip
@@ -51,3 +78,7 @@ Thumbs.db
 desktop.ini
 .idea/
 .vscode/
+*.sublime-project
+*.sublime-workspace
+.antigravity/
+.gemini/

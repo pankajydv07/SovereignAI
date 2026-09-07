@@ -192,38 +192,42 @@ prs.slide_height = Inches(7.5)
 blank_layout = prs.slide_layouts[6]
 slide = prs.slides.add_slide(blank_layout)
 
-# Background
-bg = slide.shapes.add_shape(1, Inches(0), Inches(0), Inches(13.333), Inches(7.5))
-bg.fill.solid()
-bg.fill.fore_color.rgb = RGBColor(0x0B, 0x0F, 0x14)
-bg.line.fill.background()
-
-# Title
-tb = slide.shapes.add_textbox(Inches(1.0), Inches(1.0), Inches(11.333), Inches(1.0))
+# Title Header
+tb = slide.shapes.add_textbox(Inches(0.8), Inches(0.5), Inches(11.7), Inches(0.65))
 p = tb.text_frame.paragraphs[0]
 p.text = "CRUDE DISTILLATION UNIT: TURNAROUND TECHNICAL SUMMARY"
 p.font.size = Pt(22)
 p.font.bold = True
-p.font.color.rgb = RGBColor(0xE6, 0xED, 0xF3)
+p.font.color.rgb = RGBColor(0x1F, 0x23, 0x28)
+
+# Hairline rule
+line = slide.shapes.add_shape(1, Inches(0.8), Inches(1.25), Inches(11.7), Inches(0.01))
+line.fill.solid()
+line.fill.fore_color.rgb = RGBColor(0xD0, 0xD7, 0xDE)
+line.line.color.rgb = RGBColor(0xD0, 0xD7, 0xDE)
 
 # Key metric card
-card = slide.shapes.add_shape(1, Inches(1.0), Inches(2.2), Inches(5.4), Inches(4.0))
+card = slide.shapes.add_shape(1, Inches(0.8), Inches(1.5), Inches(3.6), Inches(1.45))
 card.fill.solid()
-card.fill.fore_color.rgb = RGBColor(0x12, 0x18, 0x21)
-card.line.color.rgb = RGBColor(0x26, 0x32, 0x41)
+card.fill.fore_color.rgb = RGBColor(0xF6, 0xF8, 0xFA)
+card.line.color.rgb = RGBColor(0xD0, 0xD7, 0xDE)
 
 tf = card.text_frame
 tf.word_wrap = True
 p1 = tf.paragraphs[0]
-p1.text = "Inspection Scope Findings"
-p1.font.size = Pt(14)
+p1.text = "MINIMUM WALL THICKNESS"
+p1.font.name = "Calibri"
+p1.font.size = Pt(9.5)
 p1.font.bold = True
-p1.font.color.rgb = RGBColor(0x10, 0xB9, 0x81)
+p1.font.color.rgb = RGBColor(0x57, 0x60, 0x6A)
 
 p2 = tf.add_paragraph()
-p2.text = "• 14 Shell thickness measurements completed\n• 2 Non-conformances flagged for weld overlays\n• Next statutory inspection scheduled: Q3 2028"
-p2.font.size = Pt(11)
-p2.font.color.rgb = RGBColor(0x9A, 0xA7, 0xB4)
+p2.text = "8.40 mm"
+p2.font.name = "IBM Plex Mono"
+p2.font.size = Pt(24)
+p2.font.bold = True
+p2.font.color.rgb = RGBColor(0x1F, 0x23, 0x28)
+p2.space_before = Pt(4)
 
 prs.save("out/unit_turnaround_summary.pptx")
 ```

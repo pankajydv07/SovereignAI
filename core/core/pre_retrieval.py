@@ -22,9 +22,10 @@ async def maybe_execute_preretrieval(
     messages: list[dict[str, Any]],
     send_notification_fn: Any,
     query_vector: list[float] | None = None,
+    force_retrieval: bool = False,
 ) -> None:
-    """Execute pre-retrieval if task_class is in RETRIEVAL_TASK_CLASSES, injecting context and emitting sources."""
-    if task_class not in RETRIEVAL_TASK_CLASSES or not user_prompt:
+    """Execute pre-retrieval if task_class is in RETRIEVAL_TASK_CLASSES or force_retrieval is True."""
+    if (task_class not in RETRIEVAL_TASK_CLASSES and not force_retrieval) or not user_prompt:
         return
 
     search_engine = HybridSearchEngine(

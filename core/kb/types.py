@@ -65,6 +65,9 @@ class KBChunk(BaseModel):
     classification: ClassificationLevel = ClassificationLevel.INTERNAL
     effective_date: str = Field(alias="effectiveDate", description="YYYY-MM-DD effective date")
     superseded_by: str | None = Field(default=None, alias="supersededBy")
+    project_id: str = Field(default="default-project", alias="projectId")
+    session_id: str | None = Field(default=None, alias="sessionId")
+    scope: str = "project"
 
 
 class KBDocument(BaseModel):
@@ -79,6 +82,9 @@ class KBDocument(BaseModel):
     classification: ClassificationLevel
     effective_date: str = Field(alias="effectiveDate")
     superseded_by: str | None = Field(default=None, alias="supersededBy")
+    project_id: str = Field(default="default-project", alias="projectId")
+    session_id: str | None = Field(default=None, alias="sessionId")
+    scope: str = "project"
     chunks: list[KBChunk] = Field(default_factory=list)
 
 

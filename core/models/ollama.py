@@ -100,6 +100,23 @@ class OllamaClient:
                 f"Failed to connect to Ollama at {self.base_url}: {exc}"
             ) from exc
 
+    async def check_supports_tools(self, model_tag: str) -> bool:
+        """Check if model template or parameters declare native tool calling capability via discovery."""
+        try:
+            info = await self.show_model(model_tag)
+            template = info.get("template", "")
+            modelfile = info.get("modelfile", "")
+            capabilities = info.get("capabilities", [])
+            if "tools" in capabilities:
+                return True
+            if ".Tools" in template or "[AVAILABLE_TOOLS]" in template or "<tools>" in template:
+                return True
+            if ".Tools" in modelfile or "[AVAILABLE_TOOLS]" in modelfile:
+                return True
+            return False
+        except Exception:
+            return False
+
     async def get_running_models(self) -> list[dict[str, Any]]:
         """Fetch currently loaded models and VRAM/RAM utilization via GET /api/ps."""
         url = f"{self.base_url}/api/ps"

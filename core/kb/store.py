@@ -24,11 +24,44 @@ class KnowledgeBaseStore:
             return None
         cursor = await conn.execute(
             """
-            SELECT id, title, dept, revision, content_hash, status, classification, effective_date, superseded_by
+            SELECT id, title, dept, revision, content_hash, status, classification, effective_date, superseded_by, project_id, session_id, scope
             FROM kb_documents WHERE content_hash = ?
             """,
             (content_hash,),
         )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+    async def get_document_by_project_and_hash(
+        self, conn: aiosqlite.Connection, project_id: str, content_hash: str
+    ) -> dict[str, str | int | None] | None:
+        """Fetch existing document by project_id and content_hash for scoped deduplication."""
+        if not content_hash:
+            return None
+        cursor = await conn.execute(
+            """
+            SELECT id, title, dept, revision, content_hash, status, classification, effective_date, superseded_by, project_id, session_id, scope
+            FROM kb_documents WHERE project_id = ? AND content_hash = ?
+            """,
+            (project_id, content_hash),
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+    async def get_document_by_project_and_title(
+        self, conn: aiosqlite.Connection, project_id: str, title: str, exclude_doc_id: str | None = None
+    ) -> dict[str, str | int | None] | None:
+        """Fetch active document by project_id and title to mark previous revisions as superseded."""
+        query = """
+            SELECT id, title, dept, revision, content_hash, status, classification, effective_date, superseded_by
+            FROM kb_documents
+            WHERE project_id = ? AND title = ? AND status = 'COMPLETED' AND superseded_by IS NULL
+        """
+        params: list[Any] = [project_id, title]
+        if exclude_doc_id:
+            query += " AND id != ?"
+            params.append(exclude_doc_id)
+        cursor = await conn.execute(query, tuple(params))
         row = await cursor.fetchone()
         return dict(row) if row else None
 
@@ -75,8 +108,8 @@ class KnowledgeBaseStore:
         await conn.execute(
             """
             INSERT OR REPLACE INTO kb_documents
-            (id, title, dept, classification, effective_date, revision, content_hash, status, superseded_by, created_at_ms)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, title, dept, classification, effective_date, revision, content_hash, status, superseded_by, project_id, session_id, scope, created_at_ms)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 doc.id,
@@ -88,6 +121,9 @@ class KnowledgeBaseStore:
                 doc.content_hash,
                 doc.status,
                 doc.superseded_by,
+                doc.project_id,
+                doc.session_id,
+                doc.scope,
                 now,
             ),
         )

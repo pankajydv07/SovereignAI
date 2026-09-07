@@ -37,13 +37,14 @@ def test_libreoffice_unavailable_raises_loudly_with_instructions(tmp_path: Path)
     """Test that missing LibreOffice binary raises explicit error naming paths checked."""
     with patch("renderers.converter.shutil.which", return_value=None):
         with patch.dict("os.environ", {}, clear=True):
-            with pytest.raises(LibreOfficeUnavailableError) as exc_info:
-                DocxToPdfConverter._resolve_soffice(custom_path=tmp_path / "non_existent_soffice.exe")
+            with patch("renderers.converter.Path.exists", return_value=False):
+                with pytest.raises(LibreOfficeUnavailableError) as exc_info:
+                    DocxToPdfConverter._resolve_soffice(custom_path=tmp_path / "non_existent_soffice.exe")
 
-            err_str = str(exc_info.value)
-            assert "LibreOffice binary (soffice) not found" in err_str
-            assert "Checked paths:" in err_str
-            assert "SOFFICE_PATH" in err_str
+                err_str = str(exc_info.value)
+                assert "LibreOffice binary (soffice) not found" in err_str
+                assert "Checked paths:" in err_str
+                assert "SOFFICE_PATH" in err_str
 
 
 def test_moment_of_approval_hashing_and_stamped_copy(tmp_path: Path, sample_draft_docx: Path) -> None:
