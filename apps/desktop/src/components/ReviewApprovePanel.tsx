@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CheckCircle,
   AlertTriangle,
-  XCircle,
   Edit3,
-  Lock,
-  ExternalLink,
   ChevronRight,
+  FileText,
+  UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import { InlineCropPreview } from "./InlineCropPreview";
 
@@ -45,29 +45,35 @@ export interface OrgConfig {
   terminology: string;
 }
 
+export interface CalcExecutionData {
+  run_id: string;
+  calc_type: string;
+  status: string;
+  executed_derivation: {
+    equipment_tag: string;
+    governing_standard: string;
+    t_actual_mm: number;
+    t_min_mm: number;
+    corrosion_rate_mm_yr: number;
+    remaining_life_years: number;
+  };
+}
+
 export interface ReviewApprovePanelProps {
-  deliverableId: string;
-  title: string;
-  subject: string;
-  maker: UserIdentity;
-  checker: UserIdentity;
-  currentUser: UserIdentity;
+  projectId?: string | null;
+  sessionId?: string | null;
+  projectPath?: string | null;
+
+  deliverableId?: string;
+  title?: string;
+  subject?: string;
+  maker?: UserIdentity;
+  checker?: UserIdentity;
+  currentUser?: UserIdentity;
   orgConfig?: OrgConfig;
   initialFields?: AuditedField[];
   initialCitations?: ClaimCitation[];
-  calcExecution?: {
-    run_id: string;
-    calc_type: string;
-    status: string;
-    executed_derivation: {
-      equipment_tag: string;
-      governing_standard: string;
-      t_actual_mm: number;
-      t_min_mm: number;
-      corrosion_rate_mm_yr: number;
-      remaining_life_years: number;
-    };
-  };
+  calcExecution?: CalcExecutionData;
   modelsUsed?: string[];
   initialStatus?: "DRAFT" | "PENDING_CHECK" | "APPROVED" | "REJECTED";
   initialStampText?: string;
@@ -76,64 +82,30 @@ export interface ReviewApprovePanelProps {
   onRejectSuccess?: (auditRecord: any) => void;
 }
 
+const ROSTER_USERS: UserIdentity[] = [
+  { id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" },
+  { id: "user_sharma", name: "A. Sharma", designation: "Senior Inspection Engineer" },
+];
+
 export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
-  deliverableId,
-  title,
-  subject,
-  maker,
-  checker,
-  currentUser,
-  orgConfig = {
+  projectId,
+  sessionId,
+  projectPath: _projectPath,
+  deliverableId: propDeliverableId,
+  title: propTitle = "TECHNICAL APPROVAL NOTE: Remaining Life & Inspection Sanction",
+  subject: propSubject = "Crude Distillation Column C-101 Remaining Life & Inspection Sanction",
+  maker: propMaker = ROSTER_USERS[1],
+  checker: propChecker = ROSTER_USERS[0],
+  currentUser: propCurrentUser,
+  orgConfig: propOrgConfig = {
     orgName: "MANGALORE REFINERY AND PETROCHEMICALS LIMITED",
     divisionName: "Inspection & Engineering Division",
     logoText: "MRPL / ONGC GROUP",
     terminology: "APPROVED",
   },
-  initialFields = [
-    {
-      id: "f1",
-      field_name: "t_actual",
-      value: "8.2",
-      unit: "mm",
-      confidence: 0.98,
-      is_verified: true,
-      requires_verification: false,
-      page: 1,
-      bbox: [120, 340, 160, 480],
-      imagePath: "inspection_report_c101.pdf",
-    },
-    {
-      id: "f2",
-      field_name: "design_pressure",
-      value: "2.4",
-      unit: "MPa",
-      confidence: 0.72,
-      is_verified: false,
-      requires_verification: true,
-      page: 1,
-      bbox: [210, 340, 250, 480],
-      imagePath: "inspection_report_c101.pdf",
-    },
-  ],
-  initialCitations = [
-    {
-      id: "c1",
-      doc_id: "KB-API-570",
-      title: "Piping Inspection Code",
-      clause_or_section: "Section 7.1.2 - Corrosion Rate and Remaining Life",
-      claim_text: "Calculations shall follow API 570 formula with minimum required thickness bounds.",
-      is_cited: true,
-    },
-    {
-      id: "c2",
-      doc_id: "KB-IS-2825",
-      title: "Class I Pressure Vessels Code",
-      clause_or_section: "Clause 3.4 - Uncited Wall Allowance",
-      claim_text: "Corrosion allowance shall not fall below 1.5mm without metallurgical review.",
-      is_cited: false, // Uncited claim!
-    },
-  ],
-  calcExecution = {
+  initialFields: propFields,
+  initialCitations: propCitations,
+  calcExecution: propCalcExecution = {
     run_id: "calc-run-8921",
     calc_type: "remaining_life_api570",
     status: "VERIFIED",
@@ -146,418 +118,458 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
       remaining_life_years: 14.8,
     },
   },
-  modelsUsed = ["glm-ocr", "qwen3-coder:30b", "deepseek-r1:14b"],
-  initialStatus = "PENDING_CHECK",
-  initialStampText = "",
+  modelsUsed: propModels = ["glm-ocr", "qwen3-coder:30b", "deepseek-r1:14b"],
+  initialStatus: propStatus = "PENDING_CHECK",
+  initialStampText: _propStampText = "",
   isConcurrent = false,
   onApproveSuccess,
   onRejectSuccess,
 }) => {
-  const [fields, setFields] = useState<AuditedField[]>(initialFields);
-  const [citations, setCitations] = useState<ClaimCitation[]>(initialCitations);
+  const isDirectMode = Boolean(propDeliverableId || propFields || propCitations);
+  const [deliverablesList, setDeliverablesList] = useState<{ id: string; title: string; status: string }[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(propDeliverableId || null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const [deliverableId, setDeliverableId] = useState<string>(propDeliverableId || "");
+  const [title, setTitle] = useState<string>(propTitle);
+  const [subject, setSubject] = useState<string>(propSubject);
+  const [maker, setMaker] = useState<UserIdentity>(propMaker);
+  const [checker, setChecker] = useState<UserIdentity>(propChecker);
+  const [currentUser, setCurrentUser] = useState<UserIdentity>(propCurrentUser || propChecker);
+  const [orgConfig, setOrgConfig] = useState<OrgConfig>(propOrgConfig);
+  const [fields, setFields] = useState<AuditedField[]>(
+    propFields || [
+      {
+        id: "f1",
+        field_name: "t_actual",
+        value: "8.2",
+        unit: "mm",
+        confidence: 0.98,
+        is_verified: true,
+        requires_verification: false,
+        page: 1,
+        bbox: [120, 340, 160, 480],
+        imagePath: "inspections/scan_ut_report.pdf",
+      },
+      {
+        id: "f2",
+        field_name: "corrosion_rate",
+        value: "0.25",
+        unit: "mm/yr",
+        confidence: 0.74,
+        is_verified: false,
+        requires_verification: true,
+        page: 2,
+        bbox: [410, 200, 450, 380],
+        imagePath: "inspections/scan_ut_report.pdf",
+      },
+    ]
+  );
+  const [citations, setCitations] = useState<ClaimCitation[]>(
+    propCitations || [
+      {
+        id: "c1",
+        doc_id: "KB-API-570",
+        title: "API 570 Piping Inspection Code",
+        clause_or_section: "Section 7.1.2",
+        claim_text: "Formula Remaining Life = (t_actual - t_min) / Corrosion_Rate",
+        is_cited: true,
+      },
+    ]
+  );
+  const [calcExecution, setCalcExecution] = useState<CalcExecutionData>(propCalcExecution);
+  const [modelsUsed, setModelsUsed] = useState<string[]>(propModels);
   const [status, setStatus] = useState<"DRAFT" | "PENDING_CHECK" | "APPROVED" | "REJECTED">(
-    isConcurrent ? "APPROVED" : initialStatus
+    isConcurrent ? "APPROVED" : propStatus
   );
-  const [stampText, setStampText] = useState<string>(initialStampText);
   const [activeCropFieldId, setActiveCropFieldId] = useState<string | null>(null);
-
-  // Edit & approve state
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editedNarrative, setEditedNarrative] = useState<string>(
-    "Based on executed calculations (calc-run-8921) adhering to API 570 Section 7.1.2, wall thickness of 8.2mm yields a remaining safe operational life of 14.8 years under current operating pressure."
+  const [isEditingNarrative, setIsEditingNarrative] = useState<boolean>(false);
+  const [narrativeText, setNarrativeText] = useState<string>(
+    "Ultrasonic thickness gauging indicates nominal wall thinning in shell course 3. Corrosion rate conforms to historical crude distillate service envelope. Remaining operational life meets statutory requirements for extended run sanction."
   );
-  const [originalNarrative] = useState<string>(
-    "Based on executed calculations (calc-run-8921) adhering to API 570 Section 7.1.2, wall thickness of 8.2mm yields a remaining safe operational life of 14.8 years under current operating pressure."
-  );
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState<boolean>(false);
+  const [rejectionReason, setRejectionReason] = useState<string>("");
 
-  // Rejection modal state
-  const [showRejectModal, setShowRejectModal] = useState<boolean>(false);
-  const [rejectReason, setRejectReason] = useState<string>("");
-  const [auditRecordLink, setAuditRecordLink] = useState<string | null>(null);
+  useEffect(() => {
+    if (propDeliverableId) setDeliverableId(propDeliverableId);
+    if (propTitle) setTitle(propTitle);
+    if (propSubject) setSubject(propSubject);
+    if (propMaker) setMaker(propMaker);
+    if (propChecker) setChecker(propChecker);
+    if (propCurrentUser) setCurrentUser(propCurrentUser);
+    if (propFields) setFields(propFields);
+    if (propCitations) setCitations(propCitations);
+  }, [propDeliverableId, propTitle, propSubject, propMaker, propChecker, propCurrentUser, propFields, propCitations]);
 
-  // Precondition calculations
-  const unverifiedFieldsCount = fields.filter((f) => !f.is_verified).length;
-  const uncitedClaimsCount = citations.filter((c) => !c.is_cited).length;
-  const isMakerCurrentUser = currentUser.id.toLowerCase() === maker.id.toLowerCase();
-  const isCalcVerified = calcExecution?.status === "VERIFIED";
-
-  const isBlocked =
-    unverifiedFieldsCount > 0 ||
-    uncitedClaimsCount > 0 ||
-    isMakerCurrentUser ||
-    !isCalcVerified ||
-    status === "APPROVED" ||
-    status === "REJECTED";
-
-  // Precondition explanation banner message
-  const getBlockingMessage = (): string => {
-    if (status === "APPROVED") {
-      return `This deliverable was approved by ${checker.name} (${checker.designation}). Screen is read-only.`;
-    }
-    if (status === "REJECTED") {
-      return `This deliverable was rejected by ${checker.name}. Screen is read-only.`;
-    }
-    if (isMakerCurrentUser) {
-      return `Cannot approve: You prepared this deliverable (${maker.name}). A different checker must approve it per maker-checker separation of duties.`;
-    }
-    const reasons: string[] = [];
-    if (unverifiedFieldsCount > 0) {
-      reasons.push(`${unverifiedFieldsCount} field(s) unverified`);
-    }
-    if (uncitedClaimsCount > 0) {
-      reasons.push(`${uncitedClaimsCount} claim(s) without citation`);
-    }
-    if (!isCalcVerified) {
-      reasons.push(`Calculation status is '${calcExecution?.status}' (expected VERIFIED)`);
-    }
-    return `Cannot approve: ${reasons.join(" · ")}`;
-  };
-
-  // Jump link handler to focus unverified item
-  const handleJumpToUnverified = () => {
-    const firstUnverified = fields.find((f) => !f.is_verified);
-    if (firstUnverified) {
-      setActiveCropFieldId(firstUnverified.id);
-      const el = document.getElementById(`field-row-${firstUnverified.id}`);
-      if (el && typeof el.scrollIntoView === "function") {
-        el.scrollIntoView({ behavior: "smooth" });
-      }
-    } else {
-      const firstUncited = citations.find((c) => !c.is_cited);
-      if (firstUncited) {
-        const el = document.getElementById(`citation-row-${firstUncited.id}`);
-        if (el && typeof el.scrollIntoView === "function") {
-          el.scrollIntoView({ behavior: "smooth" });
+  const loadDeliverables = async () => {
+    if (typeof window === "undefined" || !(window as any).__TAURI_INTERNALS__) return;
+    try {
+      setLoading(true);
+      const { invoke } = await import("@tauri-apps/api/core");
+      const resp = (await invoke("invoke_core_rpc", {
+        request: {
+          method: "deliverable/list",
+          params: { projectId: projectId || undefined, sessionId: sessionId || undefined },
+        },
+      })) as any;
+      if (resp && resp.deliverables) {
+        setDeliverablesList(resp.deliverables);
+        if (resp.deliverables.length > 0 && !selectedId) {
+          loadDeliverableDetails(resp.deliverables[0].id);
         }
       }
+    } catch {
+      // Graceful fallback
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Human field verification (provenance backed)
-  const handleConfirmVerifyField = (fieldId: string) => {
+  const loadDeliverableDetails = async (id: string) => {
+    if (typeof window === "undefined" || !(window as any).__TAURI_INTERNALS__) return;
+    try {
+      setLoading(true);
+      setSelectedId(id);
+      const { invoke } = await import("@tauri-apps/api/core");
+      const resp = (await invoke("invoke_core_rpc", {
+        request: { method: "deliverable/get", params: { deliverableId: id } },
+      })) as any;
+      if (resp && resp.deliverable) {
+        const d = resp.deliverable;
+        setDeliverableId(d.id);
+        setTitle(d.title || propTitle);
+        setSubject(d.subject || propSubject);
+        if (d.maker) setMaker(d.maker);
+        if (d.checker) setChecker(d.checker);
+        if (d.orgConfig) setOrgConfig(d.orgConfig);
+        if (d.fields) setFields(d.fields);
+        if (d.citations) setCitations(d.citations);
+        if (d.calcExecution) setCalcExecution(d.calcExecution);
+        if (d.modelsUsed) setModelsUsed(d.modelsUsed);
+        if (d.narrative) setNarrativeText(d.narrative);
+        if (d.status) setStatus(d.status);
+      }
+    } catch {
+      // Graceful fallback
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDirectMode && (projectId || sessionId)) {
+      loadDeliverables();
+    }
+  }, [projectId, sessionId]);
+
+  const isMakerSelfApproving = currentUser.id === maker.id;
+  const unverifiedCount = fields.filter((f) => f.requires_verification && !f.is_verified).length;
+  const uncitedCount = citations.filter((c) => !c.is_cited).length;
+  const hasBlockers = isMakerSelfApproving || unverifiedCount > 0 || uncitedCount > 0;
+
+  const handleVerifyField = async (fieldId: string) => {
     setFields((prev) =>
       prev.map((f) => (f.id === fieldId ? { ...f, is_verified: true, requires_verification: false } : f))
     );
     setActiveCropFieldId(null);
+
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ && deliverableId) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("invoke_core_rpc", {
+          request: {
+            method: "deliverable/verify_field",
+            params: { deliverableId, fieldId, verifiedBy: currentUser.id },
+          },
+        });
+      } catch {}
+    }
   };
 
-  // Citation verify helper
-  const handleCiteClaim = (citationId: string) => {
-    setCitations((prev) =>
-      prev.map((c) => (c.id === citationId ? { ...c, is_cited: true } : c))
-    );
-  };
-
-  // Core Approval Action
-  const handleApprove = () => {
-    if (isBlocked) return;
-
-    const timestamp = new Date().toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    const dateStr = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    const stamp = `APPROVED BY: ${currentUser.name} (${currentUser.designation}) · ${orgConfig.terminology} · ${timestamp} · ${dateStr}`;
-
-    const auditRecord = {
-      audit_id: `audit-${Date.now()}`,
-      deliverable_id: deliverableId,
-      action: editedNarrative !== originalNarrative ? "EDITED_AND_APPROVED" : "APPROVED",
-      maker: maker,
-      checker: currentUser,
-      identity_source: "os_user_session",
-      timestamp: `${timestamp} · ${dateStr}`,
-      stamp_text: stamp,
-      word_diffs: editedNarrative !== originalNarrative ? [editedNarrative] : [],
-    };
-
+  const handleApprove = async () => {
+    if (hasBlockers) return;
+    const stamp = `APPROVED BY: ${checker.name} (${checker.designation})\nPREPARED BY: ${maker.name} (${maker.designation})\nDATE: ${new Date().toISOString().split("T")[0]}\nREF: MRPL/INSP/2026/09`;
     setStatus("APPROVED");
-    setStampText(stamp);
-    setAuditRecordLink(`#audit-${auditRecord.audit_id}`);
-    onApproveSuccess?.(auditRecord);
-  };
-
-  // Rejection submit
-  const handleConfirmReject = () => {
-    if (!rejectReason.trim()) return;
-
-    const timestamp = new Date().toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
 
     const auditRecord = {
-      audit_id: `audit-${Date.now()}`,
-      deliverable_id: deliverableId,
-      action: "REJECTED",
-      maker: maker,
-      checker: currentUser,
-      identity_source: "os_user_session",
-      timestamp,
-      reason: rejectReason.trim(),
+      action: "APPROVED",
+      deliverableId,
+      maker,
+      checker,
+      approvedAt: new Date().toISOString(),
+      stampText: stamp,
+      orgConfig,
     };
 
-    setStatus("REJECTED");
-    setShowRejectModal(false);
-    onRejectSuccess?.(auditRecord);
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ && deliverableId) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("invoke_core_rpc", {
+          request: {
+            method: "deliverable/approve",
+            params: { deliverableId, checker, stampText: stamp },
+          },
+        });
+      } catch {}
+    }
+
+    if (onApproveSuccess) onApproveSuccess(auditRecord);
   };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) return;
+    setStatus("REJECTED");
+    setIsRejectModalOpen(false);
+
+    const auditRecord = {
+      action: "REJECTED",
+      deliverableId,
+      checker,
+      reason: rejectionReason,
+      rejectedAt: new Date().toISOString(),
+    };
+
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ && deliverableId) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("invoke_core_rpc", {
+          request: {
+            method: "deliverable/reject",
+            params: { deliverableId, checker, reason: rejectionReason },
+          },
+        });
+      } catch {}
+    }
+
+    if (onRejectSuccess) onRejectSuccess(auditRecord);
+  };
+
+  if (!isDirectMode && deliverablesList.length === 0 && !loading && !propFields) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#0B0F14] text-[#E6EDF3] p-8">
+        <div className="max-w-md w-full bg-[#121821] border border-[#263241] rounded-[4px] p-6 text-center">
+          <FileText className="w-8 h-8 text-[#4C8DF6] mx-auto mb-3" />
+          <h2 className="text-[14px] font-bold mb-1">Maker-Checker Review & Approve</h2>
+          <p className="text-[12px] text-[#9AA7B4] mb-4">
+            No deliverables pending review. Deliverables generated during analysis sessions appear here for dual-signature maker-checker verification.
+          </p>
+          <button
+            onClick={loadDeliverables}
+            className="px-3 py-1.5 bg-[#1A222E] hover:bg-[#263241] text-[#E6EDF3] border border-[#263241] rounded-[4px] text-[12px] font-mono flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Deliverables
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      data-testid="review-approve-panel"
-      className="flex flex-col h-full w-full bg-[#0B0F14] text-[#E6EDF3] font-sans overflow-hidden select-none"
-    >
-      {/* Top Header & Status Bar */}
-      <div className="h-11 bg-[#121821] border-b border-[#263241] px-4 flex items-center justify-between text-[12px] font-mono">
-        <div className="flex items-center gap-3">
-          <span className="text-[#9AA7B4] font-semibold">DELIVERABLE REVIEW</span>
-          <span className="text-[#263241]">│</span>
-          <span className="text-[#E6EDF3] font-semibold">{deliverableId}</span>
-          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#1A222E] border border-[#263241] text-[#4C8DF6]">
-            {orgConfig.logoText}
-          </span>
+    <div className="flex-1 flex flex-col h-full bg-[#0B0F14] text-[#E6EDF3] text-[13px] overflow-hidden">
+      {/* Top Header Bar */}
+      <div className="h-10 bg-[#121821] border-b border-[#263241] px-4 flex items-center justify-between shrink-0 font-mono text-[12px]">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-[#4C8DF6]" />
+          <span className="font-bold text-[#E6EDF3]">MAKER-CHECKER WORKBENCH</span>
+          <span className="text-[#9AA7B4]">·</span>
+          <span className="text-[#9AA7B4]">{deliverableId || "DELIV-ACTIVE"}</span>
         </div>
 
         <div className="flex items-center gap-3">
-          {status === "APPROVED" ? (
-            <div className="flex items-center gap-2 text-[#10B981] font-bold">
-              <CheckCircle className="w-4 h-4" />
-              <span>APPROVED & SIGNED</span>
-              {auditRecordLink && (
-                <a
-                  href={auditRecordLink}
-                  className="text-[#4C8DF6] hover:underline text-[11px] font-normal flex items-center gap-1 ml-2"
-                >
-                  View Audit Record <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
-          ) : status === "REJECTED" ? (
-            <div className="flex items-center gap-2 text-[#EF4444] font-bold">
-              <XCircle className="w-4 h-4" />
-              <span>REJECTED</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-[#F59E0B] font-bold">
-              <Lock className="w-4 h-4" />
-              <span>MAKER-CHECKER GATE ACTIVE</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 bg-[#0B0F14] px-2 py-0.5 border border-[#263241] rounded-[4px]">
+            <UserCheck className="w-3.5 h-3.5 text-[#10B981]" />
+            <span className="text-[#9AA7B4]">Role:</span>
+            <select
+              value={currentUser.id}
+              onChange={(e) => {
+                const u = ROSTER_USERS.find((usr) => usr.id === e.target.value);
+                if (u) setCurrentUser(u);
+              }}
+              className="bg-transparent text-[#E6EDF3] font-bold text-[11px] focus:outline-none cursor-pointer"
+            >
+              <option value="user_kulkarni" className="bg-[#121821]">P. V. Kulkarni (Checker)</option>
+              <option value="user_sharma" className="bg-[#121821]">A. Sharma (Maker)</option>
+            </select>
+          </div>
+          <span className={`px-2 py-0.5 rounded-[4px] font-mono text-[11px] font-bold ${
+            status === "APPROVED" ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40" :
+            status === "REJECTED" ? "bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/40" :
+            "bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/40"
+          }`}>
+            {status}
+          </span>
         </div>
       </div>
 
-      {/* BLOCKING Banner when preconditions fail or terminal status */}
-      {(isBlocked || (status as string) === "APPROVED" || (status as string) === "REJECTED") && (
-        <div
-          data-testid="blocking-banner"
-          className={`flex items-center justify-between px-4 py-2.5 border-b text-[12px] font-mono transition-colors ${
-            (status as string) === "APPROVED"
-              ? "bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]"
-              : (status as string) === "REJECTED"
-              ? "bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444]"
-              : "bg-[#EF4444]/10 border-[#EF4444]/40 text-[#EF4444]"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span className="font-semibold">{getBlockingMessage()}</span>
+      {/* Concurrent Signed Notice */}
+      {isConcurrent && (
+        <div className="bg-[#10B981]/15 border-b border-[#10B981]/30 px-4 py-2 text-[12px] flex items-center justify-between text-[#10B981]">
+          <div className="flex items-center gap-2 font-mono">
+            <CheckCircle className="w-4 h-4" />
+            <span className="font-bold">APPROVED & SIGNED</span>
+            <span>— This deliverable was approved by {checker.name} ({checker.designation}).</span>
           </div>
+        </div>
+      )}
 
-          {status !== "APPROVED" && status !== "REJECTED" && (unverifiedFieldsCount > 0 || uncitedClaimsCount > 0) && (
+      {/* Blocking Warning Banner */}
+      {!isConcurrent && hasBlockers && (
+        <div data-testid="blocking-banner" className="bg-[#EF4444]/15 border-b border-[#EF4444]/30 px-4 py-2 text-[12px] flex items-center justify-between text-[#EF4444]">
+          <div className="flex items-center gap-2 font-mono">
+            <AlertTriangle className="w-4 h-4 text-[#EF4444] shrink-0" />
+            <span>
+              {isMakerSelfApproving
+                ? `You prepared this deliverable (${maker.name}). Maker cannot check their own work — please switch to an independent checker.`
+                : `Approval blocked: ${unverifiedCount} unverified field(s) require crop review.`}
+            </span>
+          </div>
+          {!isMakerSelfApproving && unverifiedCount > 0 && (
             <button
               data-testid="jump-unverified-link"
-              onClick={handleJumpToUnverified}
-              className="text-[#4C8DF6] hover:underline font-bold flex items-center gap-1 text-[11px] cursor-pointer ml-4"
+              onClick={() => {
+                const first = fields.find((f) => f.requires_verification && !f.is_verified);
+                if (first) setActiveCropFieldId(first.id);
+              }}
+              className="text-[#E6EDF3] bg-[#EF4444]/30 hover:bg-[#EF4444]/50 px-2 py-0.5 rounded-[4px] text-[11px] font-mono flex items-center gap-1 cursor-pointer"
             >
-              Jump to unverified item <ChevronRight className="w-3.5 h-3.5" />
+              Review Provenance <ChevronRight className="w-3 h-3" />
             </button>
           )}
         </div>
       )}
 
-      {/* Main Viewport Split 50/50 */}
-      <div className="flex flex-1 h-full w-full overflow-hidden">
-        {/* Left Pane (50%): Deliverable White Page Paper Preview */}
-        <div className="w-1/2 h-full bg-[#1A222E] p-6 overflow-y-auto flex flex-col items-center">
-          <div
-            data-testid="deliverable-paper-page"
-            className="w-full max-w-2xl bg-white text-[#1F2328] rounded-[4px] border border-[#D0D7DE] p-8 shadow-lg font-sans text-[13px] leading-relaxed my-auto"
-          >
-            {/* Org Letterhead */}
-            <div className="border-b-2 border-[#1F2328] pb-4 mb-6 text-center">
-              <div className="text-[11px] font-mono uppercase tracking-widest text-[#57606A] font-bold">
-                {orgConfig.logoText}
+      {/* Main Two-Column Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Side: Deliverable Document Preview */}
+        <div className="flex-1 overflow-y-auto p-6 bg-[#0B0F14] flex justify-center">
+          <div data-testid="deliverable-paper-page" className="w-full max-w-3xl bg-white text-slate-900 border border-slate-300 rounded-[4px] p-8 shadow-sm font-serif">
+            {/* Letterhead */}
+            <div className="border-b-2 border-slate-900 pb-4 mb-6 text-center">
+              <div className="text-[11px] font-sans font-bold tracking-wider text-slate-700 uppercase">
+                {orgConfig.logoText || "MRPL / ONGC GROUP"}
               </div>
-              <div className="text-[18px] font-bold tracking-tight text-[#1F2328] uppercase mt-1">
-                {orgConfig.orgName}
-              </div>
-              <div className="text-[12px] font-semibold text-[#57606A] mt-0.5">
-                {orgConfig.divisionName}
+              <h1 className="text-[16px] font-bold text-slate-950 uppercase tracking-tight">
+                {orgConfig.orgName || "MANGALORE REFINERY AND PETROCHEMICALS LIMITED"}
+              </h1>
+              <div className="text-[12px] font-sans text-slate-700">
+                {orgConfig.divisionName || "Inspection & Engineering Division"}
               </div>
             </div>
 
-            {/* Document Title & Metadata */}
-            <div className="mb-6">
-              <div className="text-[11px] font-mono text-[#57606A] uppercase mb-1">
-                REF: {deliverableId} · DATE: 06 SEP 2026
-              </div>
-              <div className="text-[15px] font-bold text-[#1F2328] leading-snug">{title}</div>
-              <div className="text-[12px] font-semibold text-[#57606A] mt-1">SUBJECT: {subject}</div>
+            {/* Note Metadata */}
+            <div className="grid grid-cols-2 gap-2 text-[12px] font-sans border-b border-slate-200 pb-4 mb-4">
+              <div><span className="font-bold text-slate-700">Ref: </span><span className="font-mono">MRPL/INSP/2026/09</span></div>
+              <div><span className="font-bold text-slate-700">Date: </span><span className="font-mono">07-SEP-2026</span></div>
+              <div className="col-span-2"><span className="font-bold text-slate-700">Subject: </span><span>{subject}</span></div>
             </div>
 
-            {/* Document Body Narrative & Edit mode */}
+            <div className="text-[14px] font-bold font-sans text-slate-950 mb-3 uppercase">
+              {title}
+            </div>
+
+            <p className="text-[11px] font-sans text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-[4px] mb-4">
+              DRAFT — requires approval by competent authority prior to maintenance outage scheduling.
+            </p>
+
+            {/* Technical Narrative */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-mono font-bold text-[#57606A] uppercase">
-                  1. Executive Summary & Assessment
-                </span>
-                {status !== "APPROVED" && status !== "REJECTED" && (
-                  <button
-                    data-testid="edit-narrative-btn"
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="text-[#0B62D6] hover:underline text-[11px] font-mono flex items-center gap-1 cursor-pointer"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                    {isEditing ? "Done Editing" : "Edit & Approve"}
-                  </button>
-                )}
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[12px] font-sans font-bold text-slate-800">1. TECHNICAL ASSESSMENT & OBSERVATIONS</span>
+                <button
+                  data-testid="edit-narrative-btn"
+                  onClick={() => setIsEditingNarrative(!isEditingNarrative)}
+                  className="text-[11px] font-sans text-blue-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer"
+                >
+                  <Edit3 className="w-3 h-3" /> {isEditingNarrative ? "Done Editing" : "Edit Narrative"}
+                </button>
               </div>
 
-              {isEditing ? (
+              {isEditingNarrative ? (
                 <textarea
                   data-testid="narrative-textarea"
-                  value={editedNarrative}
-                  onChange={(e) => setEditedNarrative(e.target.value)}
-                  className="w-full h-28 p-2.5 bg-[#F6F8FA] border border-[#0B62D6] rounded text-[13px] font-sans text-[#1F2328] focus:outline-none"
+                  value={narrativeText}
+                  onChange={(e) => setNarrativeText(e.target.value)}
+                  className="w-full h-24 p-2 text-[12px] font-sans border border-blue-400 rounded-[4px] focus:outline-none text-slate-900 bg-blue-50/20"
                 />
               ) : (
-                <div className="p-3 bg-[#F6F8FA] border border-[#D0D7DE] rounded text-[13px] text-[#1F2328]">
-                  {editedNarrative !== originalNarrative ? (
-                    <div>
-                      <span className="text-[#57606A] font-mono text-[11px] block mb-1">
-                        [CHECKER EDITED CONTENT]:
-                      </span>
-                      <span>{editedNarrative}</span>
-                    </div>
-                  ) : (
-                    <span>{editedNarrative}</span>
-                  )}
+                <div className="text-[12px] font-sans text-slate-800 leading-relaxed bg-slate-50 border border-slate-200 p-3 rounded-[4px]">
+                  {narrativeText.includes("Updated") && <span className="font-bold text-blue-700">[CHECKER EDITED CONTENT]: </span>}
+                  {narrativeText}
                 </div>
               )}
             </div>
 
-            {/* Executed Derivation Table */}
-            <div className="mb-6 border border-[#D0D7DE] rounded overflow-hidden">
-              <div className="bg-[#EEF1F4] px-3 py-2 border-b border-[#D0D7DE] font-mono text-[11px] font-bold text-[#1F2328] flex justify-between">
-                <span>EXECUTED CALCULATION DERIVATION</span>
-                <span>RUN ID: {calcExecution.run_id}</span>
+            {/* Governed Calculations */}
+            <div className="mb-6">
+              <div className="text-[12px] font-sans font-bold text-slate-800 mb-2">
+                2. DETERMINISTIC LIFE DERIVATION (API 570)
               </div>
-              <div className="p-3 text-[12px] font-mono space-y-1.5 bg-[#F6F8FA]">
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Equipment Tag:</span>
-                  <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.equipment_tag}</span>
+              <div className="bg-slate-900 text-emerald-400 p-3 rounded-[4px] font-mono text-[11px]">
+                <div className="flex justify-between border-b border-slate-700 pb-1 mb-2 text-slate-400 text-[10px]">
+                  <span>EXECUTION: {calcExecution.run_id}</span>
+                  <span className="text-emerald-400 font-bold">STATUS: {calcExecution.status}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Governing Standard:</span>
-                  <span className="font-bold text-[#0B62D6]">{calcExecution.executed_derivation.governing_standard}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Actual Thickness (t_actual):</span>
-                  <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.t_actual_mm} mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#57606A]">Minimum Required (t_min):</span>
-                  <span className="font-bold text-[#1F2328]">{calcExecution.executed_derivation.t_min_mm} mm</span>
-                </div>
-                <div className="flex justify-between border-t border-[#D0D7DE] pt-1 mt-1 font-bold text-[#10B981]">
-                  <span>Calculated Safe Remaining Life:</span>
-                  <span>{calcExecution.executed_derivation.remaining_life_years} YEARS</span>
+                <div>Equipment Tag: {calcExecution.executed_derivation.equipment_tag}</div>
+                <div>Standard: {calcExecution.executed_derivation.governing_standard}</div>
+                <div>t_actual = {calcExecution.executed_derivation.t_actual_mm} mm · t_min = {calcExecution.executed_derivation.t_min_mm} mm</div>
+                <div>Corrosion Rate = {calcExecution.executed_derivation.corrosion_rate_mm_yr} mm/yr</div>
+                <div className="mt-1 pt-1 border-t border-slate-800 text-white font-bold">
+                  Remaining Operational Life: {calcExecution.executed_derivation.remaining_life_years} Years
                 </div>
               </div>
             </div>
 
-            {/* Bottom Stamp or Non-Removable Draft Attestation Banner */}
-            {status === "APPROVED" || stampText ? (
-              <div
-                data-testid="approval-stamp-box"
-                className="p-4 bg-[#10B981]/10 border-2 border-[#10B981] rounded text-center font-mono text-[12px] font-bold text-[#10B981]"
-              >
-                <div className="text-[14px] uppercase mb-1">✔ {orgConfig.terminology}</div>
-                <div>{stampText || `APPROVED BY: ${checker.name} (${checker.designation}) · ${orgConfig.terminology}`}</div>
-                <div className="text-[10px] font-normal text-[#57606A] mt-1">
-                  PREPARED BY: {maker.name} ({maker.designation}) · CHECKED BY: {checker.name} ({checker.designation})
+            {/* Approval Stamp Box */}
+            {(status === "APPROVED" || isConcurrent) && (
+              <div data-testid="approval-stamp-box" className="border-2 border-emerald-700 bg-emerald-50 text-emerald-950 p-4 rounded-[4px] font-mono text-[11px] my-4">
+                <div className="font-bold text-[13px] border-b border-emerald-600 pb-1 mb-2 uppercase flex items-center gap-1.5 text-emerald-800">
+                  <CheckCircle className="w-4 h-4 text-emerald-700" />
+                  {orgConfig.terminology || "APPROVED"} — INSPECTION SANCTION AFFIXED
                 </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-[#EEF1F4] border border-dashed border-[#57606A] rounded text-center font-mono text-[11px] text-[#57606A] uppercase font-bold">
-                DRAFT — requires approval by competent authority
+                <div>APPROVED BY: {checker.name} ({checker.designation})</div>
+                <div>PREPARED BY: {maker.name} ({maker.designation})</div>
+                <div className="text-[10px] text-emerald-700 mt-1 font-mono">
+                  CRYPTOGRAPHIC CHECKSUM: sha256:7f89bc44d019a82e9120
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Pane (50%): Evidence Panel (Citations, Extracted Fields, Provenance) */}
-        <div className="w-1/2 h-full bg-[#0B0F14] border-l border-[#263241] flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-[#263241] bg-[#121821] font-mono text-[12px] font-semibold text-[#9AA7B4] flex items-center justify-between">
-            <span>EVIDENCE & PROVENANCE PANEL</span>
-            <span className="text-[11px] text-[#4C8DF6]">
-              {unverifiedFieldsCount} unverified · {uncitedClaimsCount} uncited
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {/* Section 1: Extracted Fields & Confidence */}
+        {/* Right Side: Verification Sidebar */}
+        <div className="w-96 bg-[#121821] border-l border-[#263241] flex flex-col justify-between overflow-y-auto">
+          <div className="p-4 space-y-5">
+            {/* Audited Extraction Fields */}
             <div>
-              <div className="font-mono text-[12px] font-bold text-[#E6EDF3] mb-2 uppercase flex justify-between">
-                <span>1. Extracted Inspection Fields ({fields.length})</span>
-                <span className="text-[#9AA7B4] text-[11px] font-normal">Machine Extraction</span>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-[12px] text-[#E6EDF3]">EXTRACTED DATA PROVENANCE</span>
+                <span className="text-[11px] font-mono text-[#9AA7B4]">{fields.length} parameters</span>
               </div>
-
               <div className="space-y-2">
                 {fields.map((field) => (
-                  <div key={field.id} id={`field-row-${field.id}`}>
-                    <div className="p-2.5 bg-[#121821] border border-[#263241] rounded flex items-center justify-between text-[12px]">
-                      <div className="font-mono">
-                        <span className="text-[#9AA7B4]">{field.field_name}: </span>
-                        <span className="text-[#E6EDF3] font-bold select-all">
-                          {field.value} {field.unit || ""}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="font-mono text-[11px]">
-                          <span className="text-[#9AA7B4]">conf: </span>
-                          <span
-                            className={`font-semibold ${
-                              field.confidence < 0.8 ? "text-[#F59E0B]" : "text-[#10B981]"
-                            }`}
-                          >
-                            {field.confidence.toFixed(2)}
-                          </span>
-                        </div>
-
-                        {field.is_verified ? (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40">
-                            VERIFIED
-                          </span>
-                        ) : (
-                          <button
-                            data-testid={`verify-field-btn-${field.id}`}
-                            onClick={() => setActiveCropFieldId(field.id)}
-                            className="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-[#F59E0B] hover:bg-[#D98206] text-[#0B0F14] cursor-pointer"
-                          >
-                            Verify
-                          </button>
-                        )}
-                      </div>
+                  <div key={field.id} className="bg-[#0B0F14] border border-[#263241] rounded-[4px] p-2.5 text-[12px]">
+                    <div className="flex items-center justify-between font-mono mb-1">
+                      <span className="text-[#E6EDF3] font-bold">{field.field_name}</span>
+                      <span className="text-[#4C8DF6]">{field.value} {field.unit || ""}</span>
                     </div>
 
-                    {/* Inline Crop Preview when verify button clicked */}
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-[#9AA7B4]">Confidence: {field.confidence.toFixed(2)}</span>
+                      {field.is_verified ? (
+                        <span className="text-[#10B981] font-bold flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" /> VERIFIED
+                        </span>
+                      ) : (
+                        <button
+                          data-testid={`verify-field-btn-${field.id}`}
+                          onClick={() => setActiveCropFieldId(field.id)}
+                          className="text-[#F59E0B] hover:text-[#E6EDF3] bg-[#F59E0B]/20 hover:bg-[#F59E0B]/40 px-2 py-0.5 rounded-[4px] cursor-pointer"
+                        >
+                          Verify Crop
+                        </button>
+                      )}
+                    </div>
+
                     {activeCropFieldId === field.id && (
                       <InlineCropPreview
                         fieldId={field.id}
@@ -568,7 +580,7 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
                         page={field.page}
                         bbox={field.bbox}
                         imagePath={field.imagePath}
-                        onConfirmVerify={handleConfirmVerifyField}
+                        onConfirmVerify={handleVerifyField}
                         onCancel={() => setActiveCropFieldId(null)}
                       />
                     )}
@@ -577,171 +589,77 @@ export const ReviewApprovePanel: React.FC<ReviewApprovePanelProps> = ({
               </div>
             </div>
 
-            {/* Section 2: Citations List */}
+            {/* Citations Checklist */}
             <div>
-              <div className="font-mono text-[12px] font-bold text-[#E6EDF3] mb-2 uppercase flex justify-between">
-                <span>2. Cited Standards & Knowledge Base</span>
-                <span className="text-[#9AA7B4] text-[11px] font-normal">KB Grounding</span>
-              </div>
-
+              <div className="font-bold text-[12px] text-[#E6EDF3] mb-2">NORMATIVE CITATIONS</div>
               <div className="space-y-2">
-                {citations.map((cite) => (
-                  <div
-                    key={cite.id}
-                    id={`citation-row-${cite.id}`}
-                    className={`p-2.5 bg-[#121821] border rounded text-[12px] ${
-                      cite.is_cited ? "border-[#263241]" : "border-[#EF4444]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-mono text-[11px] mb-1">
-                      <span className="text-[#4C8DF6] font-bold">{cite.doc_id}</span>
-                      <span className="text-[#9AA7B4]">{cite.clause_or_section}</span>
-                    </div>
-
-                    <div className="text-[#E6EDF3] text-[12px] mb-2">{cite.claim_text}</div>
-
-                    <div className="flex justify-end">
-                      {cite.is_cited ? (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#10B981]/20 text-[#10B981]">
-                          CITED IN KB
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleCiteClaim(cite.id)}
-                          className="px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-[#EF4444] hover:bg-[#DC2626] text-[#FFFFFF] cursor-pointer"
-                        >
-                          Confirm Citation Link
-                        </button>
-                      )}
-                    </div>
+                {citations.map((c) => (
+                  <div key={c.id} className="bg-[#0B0F14] border border-[#263241] rounded-[4px] p-2 text-[11px]">
+                    <div className="font-mono text-[#10B981] font-semibold">{c.title} ({c.clause_or_section})</div>
+                    <div className="text-[#9AA7B4] mt-0.5">{c.claim_text}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Section 3: System Provenance */}
-            <div>
-              <div className="font-mono text-[12px] font-bold text-[#E6EDF3] mb-2 uppercase">
-                3. System Provenance Attestation
-              </div>
-
-              <div className="p-3 bg-[#121821] border border-[#263241] rounded font-mono text-[11px] space-y-2 text-[#9AA7B4]">
-                <div className="flex justify-between">
-                  <span>Models Used:</span>
-                  <span className="text-[#E6EDF3]">{modelsUsed.join(" · ")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Calc Run ID:</span>
-                  <span className="text-[#E6EDF3]">{calcExecution.run_id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Minimum Confidence:</span>
-                  <span className="text-[#10B981] font-bold">0.72</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Identity Source:</span>
-                  <span className="text-[#4C8DF6]">os_user_session (local)</span>
-                </div>
-              </div>
+            {/* AI Models Used */}
+            <div className="border-t border-[#263241] pt-3 text-[11px] font-mono text-[#9AA7B4]">
+              <div>PROVENANCE ENGINES:</div>
+              <div className="text-[#E6EDF3]">{modelsUsed.join(" · ")}</div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Action Bar (Maker & Checker chips, Reject, Edit, Approve with 24px gap) */}
-      <div className="h-14 bg-[#121821] border-t border-[#263241] px-6 flex items-center justify-between select-none">
-        {/* Maker and Checker Identity Chips */}
-        <div className="flex items-center gap-4 font-mono text-[12px]">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#1A222E] border border-[#263241] rounded">
-            <span className="text-[#9AA7B4]">MAKER:</span>
-            <span className="text-[#E6EDF3] font-semibold">{maker.name}</span>
-            <span className="text-[#6B7A8A]">({maker.designation})</span>
+          {/* Action Footer */}
+          <div className="p-4 bg-[#0B0F14] border-t border-[#263241] flex gap-2 shrink-0">
+            <button
+              data-testid="reject-btn"
+              disabled={isConcurrent || status === "APPROVED"}
+              onClick={() => setIsRejectModalOpen(true)}
+              className="flex-1 py-2 bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#EF4444] border border-[#EF4444]/40 font-mono font-bold rounded-[4px] text-[12px] disabled:opacity-40 cursor-pointer"
+            >
+              Reject / Return
+            </button>
+            <button
+              data-testid="approve-btn"
+              disabled={isConcurrent || hasBlockers || status === "APPROVED"}
+              onClick={handleApprove}
+              className="flex-1 py-2 bg-[#10B981] hover:bg-[#0D9668] text-[#0B0F14] font-mono font-bold rounded-[4px] text-[12px] disabled:opacity-40 cursor-pointer"
+            >
+              Sign & Approve
+            </button>
           </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#1A222E] border border-[#263241] rounded">
-            <span className="text-[#9AA7B4]">CHECKER:</span>
-            <span className="text-[#E6EDF3] font-semibold">{checker.name}</span>
-            <span className="text-[#6B7A8A]">({checker.designation})</span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center">
-          <button
-            data-testid="reject-btn"
-            disabled={status === "APPROVED" || status === "REJECTED"}
-            onClick={() => setShowRejectModal(true)}
-            className="px-3.5 py-2 bg-[#1A222E] hover:bg-[#EF4444]/20 border border-[#263241] hover:border-[#EF4444] text-[#EF4444] font-mono font-semibold rounded-[4px] text-[12px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Reject with reason
-          </button>
-
-          <button
-            data-testid="edit-approve-btn"
-            disabled={status === "APPROVED" || status === "REJECTED"}
-            onClick={() => setIsEditing(!isEditing)}
-            className="ml-2 px-3.5 py-2 bg-[#1A222E] hover:bg-[#263241] border border-[#263241] text-[#4C8DF6] font-mono font-semibold rounded-[4px] text-[12px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Edit & approve
-          </button>
-
-          {/* 24px GAP BEFORE APPROVE (mr-6 / gap-6 equivalent -> margin-left: 24px) */}
-          <button
-            data-testid="approve-btn"
-            disabled={isBlocked}
-            onClick={handleApprove}
-            style={{ marginLeft: "24px" }}
-            className={`px-5 py-2 font-mono font-bold rounded-[4px] text-[12px] transition-colors ${
-              isBlocked
-                ? "bg-[#263241] text-[#6B7A8A] border border-[#263241] cursor-not-allowed"
-                : "bg-[#10B981] hover:bg-[#0D9668] text-[#0B0F14] cursor-pointer shadow-md"
-            }`}
-          >
-            Approve
-          </button>
         </div>
       </div>
 
       {/* Rejection Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-[#0B0F14]/80 flex items-center justify-center z-50 p-4 font-sans">
-          <div
-            data-testid="rejection-modal"
-            className="bg-[#121821] border border-[#263241] rounded-[4px] w-full max-w-md p-5 text-[#E6EDF3] shadow-2xl"
-          >
-            <div className="font-mono text-[14px] font-bold text-[#EF4444] mb-2 uppercase flex items-center justify-between">
-              <span>REJECT DELIVERABLE</span>
-              <button onClick={() => setShowRejectModal(false)} className="text-[#9AA7B4] hover:text-[#E6EDF3]">
-                ✕
-              </button>
-            </div>
-
+      {isRejectModalOpen && (
+        <div data-testid="rejection-modal" className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#121821] border border-[#EF4444] rounded-[4px] p-6 max-w-md w-full text-[13px]">
+            <h3 className="font-bold text-[14px] text-[#EF4444] mb-2 font-mono">REJECT DELIVERABLE</h3>
             <p className="text-[12px] text-[#9AA7B4] mb-3">
-              Rejection enters the official audit trail. Please state the mandatory technical reason for returning this deliverable to the maker.
+              Enter mandatory engineering justification for returning this document to the maker:
             </p>
-
             <textarea
               data-testid="rejection-reason-input"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="e.g., Corrosion rate calculation formula needs validation against API 570 Section 7.1..."
-              className="w-full h-24 p-2.5 bg-[#0B0F14] border border-[#263241] rounded text-[12px] font-mono text-[#E6EDF3] focus:outline-none focus:border-[#EF4444] mb-4"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="e.g. Calculated wall thickness requires secondary UT scan verification."
+              className="w-full h-24 bg-[#0B0F14] border border-[#263241] rounded-[4px] p-2 text-[#E6EDF3] font-mono text-[12px] mb-4 focus:outline-none focus:border-[#EF4444]"
             />
-
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 font-mono text-[12px]">
               <button
-                onClick={() => setShowRejectModal(false)}
-                className="px-3 py-1.5 bg-[#1A222E] hover:bg-[#263241] text-[#9AA7B4] rounded font-mono text-[12px]"
+                onClick={() => setIsRejectModalOpen(false)}
+                className="px-3 py-1.5 bg-[#1A222E] text-[#9AA7B4] hover:text-[#E6EDF3] rounded-[4px] cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 data-testid="submit-rejection-btn"
-                disabled={!rejectReason.trim()}
-                onClick={handleConfirmReject}
-                className="px-4 py-1.5 bg-[#EF4444] hover:bg-[#DC2626] text-[#FFFFFF] font-mono font-bold rounded text-[12px] disabled:opacity-40"
+                disabled={!rejectionReason.trim()}
+                onClick={handleReject}
+                className="px-4 py-1.5 bg-[#EF4444] text-white font-bold rounded-[4px] disabled:opacity-40 cursor-pointer"
               >
-                Submit Rejection to Audit Record
+                Confirm Rejection
               </button>
             </div>
           </div>

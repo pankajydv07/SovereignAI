@@ -176,6 +176,29 @@ CREATE TABLE IF NOT EXISTS audit_records (
     created_at_ms INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS deliverables (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    status TEXT NOT NULL,
+    org_config_json TEXT NOT NULL,
+    maker_json TEXT NOT NULL,
+    checker_json TEXT NOT NULL,
+    narrative TEXT NOT NULL,
+    fields_json TEXT NOT NULL,
+    citations_json TEXT NOT NULL,
+    calc_execution_json TEXT NOT NULL,
+    models_used_json TEXT NOT NULL,
+    stamp_text TEXT NOT NULL DEFAULT '',
+    audit_record_id TEXT,
+    created_at_ms INTEGER NOT NULL,
+    updated_at_ms INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_deliverables_project ON deliverables(project_id, updated_at_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_deliverables_session ON deliverables(session_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id, updated_at_ms DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session_seq ON events(session_id, seq);
 CREATE INDEX IF NOT EXISTS idx_steps_session ON steps(session_id, step_index);

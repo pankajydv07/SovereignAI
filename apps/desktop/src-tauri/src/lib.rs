@@ -8,7 +8,16 @@ pub mod workspace;
 use protocol::{FileNode, ProjectInfo};
 use pty::PtyManager;
 use sidecar::{CoreState, CoreSupervisor};
-use sovereignty::{EgressEvent, SovereigntyState, SovereigntyStatus};
+use sovereignty::{EgressEvent, SovereigntyState, SovereigntyStatus, SovereigntyVerification};
+
+#[tauri::command]
+async fn get_sovereignty_verification(
+    app_handle: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<SovereigntyVerification, String> {
+    Ok(state.sovereignty.run_verification(Some(&app_handle)))
+}
+
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -321,6 +330,7 @@ pub fn run() {
             resize_pty,
             close_pty,
             get_sovereignty_status,
+            get_sovereignty_verification,
             get_egress_events,
             acknowledge_egress_event,
             execute_sandbox,

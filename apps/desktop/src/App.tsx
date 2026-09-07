@@ -344,12 +344,9 @@ export const App: React.FC = () => {
 
             <div className={activeTab === "review" ? "flex-1 flex flex-col overflow-hidden" : "hidden"}>
               <ReviewApprovePanel
-                deliverableId="DELIV-2026-09-C101"
-                title="TECHNICAL APPROVAL NOTE: Remaining Life & Inspection Sanction"
-                subject="Crude Distillation Column C-101 Remaining Life & Inspection Sanction"
-                maker={{ id: "user_sharma", name: "A. Sharma", designation: "Senior Inspection Engineer" }}
-                checker={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
-                currentUser={{ id: "user_kulkarni", name: "P. V. Kulkarni", designation: "Chief Manager - Mechanical" }}
+                projectId={activeProject?.id}
+                sessionId={sessState.activeSessionId}
+                projectPath={activeProject?.path}
               />
             </div>
 

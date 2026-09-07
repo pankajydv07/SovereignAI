@@ -20,6 +20,7 @@ from models.ollama import OllamaClient
 from models.registry import ModelRegistry
 from models.router import ModelRouter
 from storage import SessionNotFoundError, SessionStore
+from storage.deliverable_store import DeliverableStore
 from tools.registry import create_default_tool_registry
 
 SUPPORTED_PROTOCOL_VERSION = "2026-03-01"
@@ -33,6 +34,7 @@ ollama_client = OllamaClient()
 router = ModelRouter(model_registry)
 policy_engine = PolicyEngine()
 session_stores: dict[str, SessionStore] = {}
+deliverable_stores: dict[str, DeliverableStore] = {}
 
 
 def sanitize_surrogates(obj: Any) -> Any:
@@ -99,6 +101,27 @@ def get_session_store(
         session_stores[target_str] = store
         policy_engine.session_store = store
     return session_stores[target_str]
+
+
+def get_deliverable_store(
+    project_path: str | Path | None = None,
+    db_path: str | Path | None = None,
+) -> DeliverableStore:
+    """Resolve or cache DeliverableStore instance based on project path or db path."""
+    if db_path:
+        target = Path(db_path).resolve()
+    elif project_path:
+        target = Path(project_path).resolve() / ".swaraj" / "sessions.db"
+    else:
+        target = Path.home() / ".swaraj" / "sessions.db"
+
+    target_str = str(target)
+    if target_str not in deliverable_stores:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        store = DeliverableStore(str(target))
+        deliverable_stores[target_str] = store
+    return deliverable_stores[target_str]
+
 
 
 async def handle_rpc_message(line: str) -> bool:
@@ -256,6 +279,72 @@ async def handle_rpc_message(line: str) -> bool:
                 "result": {"fulfilment": fulfilment, "models": roster_models},
             })
             return True
+
+        if method == "deliverable/create":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            deliv_data = params.get("deliverable", {})
+            created = await dstore.create_deliverable(deliv_data)
+            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": created}})
+            return True
+
+        if method == "deliverable/list":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            p_id = params.get("projectId")
+            deliverables = await dstore.list_deliverables(p_id, params.get("sessionId"))
+            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverables": deliverables}})
+            return True
+
+        if method == "deliverable/get":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            d_id = params.get("deliverableId")
+            d = await dstore.get_deliverable(d_id) if d_id else None
+            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": d}})
+            return True
+
+        if method == "deliverable/verify_field":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            d_id = params.get("deliverableId", "")
+            f_id = params.get("fieldId", "")
+            res = await dstore.verify_field(d_id, f_id)
+            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": res}})
+            return True
+
+        if method == "deliverable/cite_claim":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            d_id = params.get("deliverableId", "")
+            c_id = params.get("citationId", "")
+            res = await dstore.cite_claim(d_id, c_id)
+            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": res}})
+            return True
+
+        if method == "deliverable/approve":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            d_id = params.get("deliverableId", "")
+            checker_id = params.get("checkerId", "user_kulkarni")
+            checker_name = params.get("checkerName", "P. V. Kulkarni")
+            checker_desig = params.get("checkerDesignation", "Chief Manager - Mechanical")
+            narrative = params.get("editedNarrative")
+            try:
+                res = await dstore.approve(d_id, checker_id, checker_name, checker_desig, narrative)
+                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
+            except Exception as err:
+                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32000, "message": str(err)}})
+            return True
+
+        if method == "deliverable/reject":
+            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
+            d_id = params.get("deliverableId", "")
+            checker_id = params.get("checkerId", "user_kulkarni")
+            checker_name = params.get("checkerName", "P. V. Kulkarni")
+            checker_desig = params.get("checkerDesignation", "Chief Manager - Mechanical")
+            reason = params.get("reason", "")
+            try:
+                res = await dstore.reject(d_id, checker_id, checker_name, checker_desig, reason)
+                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
+            except Exception as err:
+                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32000, "message": str(err)}})
+            return True
+
 
         if method == "shutdown":
             for task in chat_manager.active_streams.values():
