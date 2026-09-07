@@ -4,6 +4,7 @@
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool, SideEffect, ToolContext, ToolKind, ToolResult
+from tools.document_reader import SUPPORTED_RICH_EXTENSIONS, convert_document_to_markdown
 from tools.workspace import WorkspaceAccessError, verify_workspace_path
 
 MAX_LINE_THRESHOLD = 800
@@ -31,8 +32,9 @@ class FsReadOutput(BaseModel):
 class FsReadTool(BaseTool[FsReadInput, FsReadOutput]):
     name = "fs_read"
     description = (
-        "Read file content within the workspace. Supports 1-indexed line ranges. "
-        "Refuses full reads for large files (>800 lines or >46KB) with a hint to narrow."
+        "Read file content from the workspace. Automatically converts spreadsheets (.xlsx, .xls, .csv), "
+        "Word documents (.docx), presentations (.pptx), and PDFs into structured Markdown tables and text. "
+        "Always use this tool when asked to read, inspect, or explain any file in the workspace."
     )
     kind = ToolKind.READ
     side_effect = SideEffect.READ
@@ -49,30 +51,35 @@ class FsReadTool(BaseTool[FsReadInput, FsReadOutput]):
             return ToolResult.failed(str(exc))
 
         if not target_path.exists():
-            return ToolResult.failed(f"File not found: {args.path}")
+            clean_search = args.path.strip("\"' .").lower()
+            candidates = [
+                f for f in ctx.workspace_root.rglob("*")
+                if f.is_file() and (
+                    clean_search == f.name.lower()
+                    or (len(clean_search) >= 3 and clean_search in f.name.lower())
+                    or (len(clean_search) >= 3 and f.stem.lower() in clean_search)
+                )
+            ]
+            if len(candidates) >= 1:
+                target_path = verify_workspace_path(candidates[0], ctx.workspace_root)
+            else:
+                return ToolResult.failed(f"File not found: {args.path}")
+
         if not target_path.is_file():
             return ToolResult.failed(f"Path is not a regular file: {args.path}")
 
         try:
-            if target_path.suffix.lower() == ".pdf":
-                from pypdf import PdfReader
-                reader = PdfReader(str(target_path))
-                extracted_pages = []
-                for i, page in enumerate(reader.pages):
-                    raw_p = page.extract_text() or ""
-                    clean_p = raw_p.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                    extracted_pages.append(f"--- Page {i + 1} ---\n{clean_p}")
-                text = "\n\n".join(extracted_pages)
-                raw_bytes = text.encode("utf-8", errors="replace")
-                total_bytes = len(raw_bytes)
-                lines = text.splitlines(keepends=True)
-                total_lines = len(lines)
+            if target_path.suffix.lower() in SUPPORTED_RICH_EXTENSIONS:
+                text = convert_document_to_markdown(target_path)
             else:
                 raw_bytes = target_path.read_bytes()
-                total_bytes = len(raw_bytes)
                 text = raw_bytes.decode("utf-8", errors="replace")
-                lines = text.splitlines(keepends=True)
-                total_lines = len(lines)
+
+            clean_text = text.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
+            raw_bytes = clean_text.encode("utf-8", errors="replace")
+            total_bytes = len(raw_bytes)
+            lines = clean_text.splitlines(keepends=True)
+            total_lines = len(lines)
         except Exception as exc:
             return ToolResult.failed(f"Failed to read file '{args.path}': {exc}")
 

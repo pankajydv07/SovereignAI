@@ -18,6 +18,7 @@ from models.registry import ModelRegistry
 from models.router import ModelRouter
 from storage import SessionStore
 from tools.base import ToolContext
+from tools.document_reader import convert_document_to_markdown
 from tools.registry import ToolRegistry
 
 log = logging.getLogger(__name__)
@@ -142,27 +143,13 @@ class ChatManager:
                                 attachment_contexts.append(f"### Attached Image: {att_name} ({p.name})")
                             except Exception as e:
                                 attachment_contexts.append(f"### Attached Image: {att_name} (Failed to load: {e})")
-                        elif suf == ".pdf":
-                            try:
-                                from pypdf import PdfReader
-                                r = PdfReader(str(p))
-                                pdf_texts = []
-                                for i, page in enumerate(r.pages):
-                                    raw_p = page.extract_text() or ""
-                                    clean_p = raw_p.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                                    pdf_texts.append(f"--- Page {i+1} ---\n{clean_p}")
-                                attachment_contexts.append(
-                                    f"### Document: {att_name} ({p.name})\n" + "\n\n".join(pdf_texts)
-                                )
-                            except Exception as e:
-                                attachment_contexts.append(f"### Document: {att_name} (Failed to parse PDF: {e})")
                         else:
                             try:
-                                txt = p.read_text(encoding="utf-8", errors="replace")
-                                clean_txt = txt.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                                attachment_contexts.append(f"### File: {att_name}\n```\n{clean_txt[:24000]}\n```")
+                                doc_md = convert_document_to_markdown(p)
+                                clean_md = doc_md.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
+                                attachment_contexts.append(f"### Document: {att_name} ({p.name})\n\n{clean_md[:32000]}")
                             except Exception as e:
-                                attachment_contexts.append(f"### File: {att_name} (Failed to read: {e})")
+                                attachment_contexts.append(f"### Document: {att_name} (Failed to read: {e})")
                 elif att_content:
                     clean_att = str(att_content).encode("utf-8", errors="replace").decode("utf-8", errors="replace")
                     attachment_contexts.append(f"### Document: {att_name}\n```\n{clean_att[:24000]}\n```")
