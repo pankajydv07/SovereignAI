@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Bot, User, Sparkles, Copy, Check } from "lucide-react";
+import { MarkdownContent } from "./MarkdownContent";
 
 export interface ChatMessage {
   id: string;
@@ -116,9 +117,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ msg }) => {
         </details>
       )}
 
-      <div className="whitespace-pre-wrap text-[#E6EDF3] leading-relaxed select-text">
-        {msg.content || (msg.isStreaming ? "..." : "")}
-      </div>
+      {msg.content ? (
+        <MarkdownContent content={msg.content} />
+      ) : msg.isStreaming ? (
+        <div className="text-[13px] text-[#8B949E] font-mono animate-pulse">...</div>
+      ) : null}
     </div>
   );
 };

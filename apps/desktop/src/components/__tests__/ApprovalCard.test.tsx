@@ -23,10 +23,10 @@ describe("ApprovalCard Component", () => {
     expect(screen.getByTestId("diff-command-pre").textContent).toContain("+ new line added");
 
     fireEvent.click(screen.getByTestId("allow-once-btn"));
-    expect(onRespond).toHaveBeenCalledWith("req_123", "allow_once");
+    expect(onRespond).toHaveBeenCalledWith("req_123", "allow_once", "docs/**");
 
     fireEvent.click(screen.getByTestId("always-allow-btn"));
-    expect(onRespond).toHaveBeenCalledWith("req_123", "always_allow");
+    expect(onRespond).toHaveBeenCalledWith("req_123", "always_allow", "docs/**");
 
     fireEvent.click(screen.getByTestId("deny-btn"));
     expect(onRespond).toHaveBeenCalledWith("req_123", "deny");

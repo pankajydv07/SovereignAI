@@ -137,7 +137,7 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({
           onClick={() => onRespond(requestId, "always_allow", selectedPattern)}
           className="px-3 py-1.5 bg-[#263241] hover:bg-[#344458] text-[#E6EDF3] font-mono font-semibold rounded-[4px] text-[12px]"
         >
-          Always Allow Scope ({selectedPattern})
+          Always Allow Scope (<span data-testid="pattern-scope">{selectedPattern}</span>)
         </button>
         <button
           data-testid="deny-btn"
