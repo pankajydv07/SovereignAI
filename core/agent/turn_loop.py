@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from agent.budget import RunBudgetTracker, StopReason
 from agent.policy import PolicyDecision, PolicyEngine
 from agent.resources import compute_default_resource_pattern, extract_resource_string
-from models.ollama import OllamaClient
+from models.ollama import OllamaApiError, OllamaClient
 from tools.base import ToolContext, ToolResult
 from tools.registry import ToolRegistry
 
@@ -47,23 +47,14 @@ class TurnLoop:
     MAX_REPAIR_ATTEMPTS: int = 2
 
     def __init__(
-        self,
-        ollama_client: OllamaClient,
-        tool_registry: ToolRegistry,
-        budget_tracker: RunBudgetTracker,
-        policy_engine: PolicyEngine | None = None,
-        permission_requester: Callable[
-            [str, str, str, str, str], Awaitable[tuple[str, str | None]]
-        ]
-        | None = None,
+        self, ollama_client: OllamaClient, tool_registry: ToolRegistry,
+        budget_tracker: RunBudgetTracker, policy_engine: PolicyEngine | None = None,
+        permission_requester: Callable[[str, str, str, str, str], Awaitable[tuple[str, str | None]]] | None = None,
         session_store: Any | None = None,
     ) -> None:
-        self.ollama = ollama_client
-        self.registry = tool_registry
-        self.tracker = budget_tracker
+        self.ollama, self.registry, self.tracker = ollama_client, tool_registry, budget_tracker
         self.policy_engine = policy_engine or PolicyEngine(session_store=session_store)
-        self.permission_requester = permission_requester
-        self.session_store = session_store
+        self.permission_requester, self.session_store = permission_requester, session_store
         self.active_task: asyncio.Task[Any] | None = None
         self._cancelled: bool = False
 
@@ -80,9 +71,7 @@ class TurnLoop:
         if self.session_store and hasattr(self.session_store, "append_event"):
             try:
                 await self.session_store.append_event(
-                    session_id=session_id,
-                    event_type="checkpoint",
-                    payload={"state": state, "details": details},
+                    session_id=session_id, event_type="checkpoint", payload={"state": state, "details": details}
                 )
             except Exception as exc:
                 log.warning(f"failed_to_write_checkpoint: {exc}")
@@ -233,8 +222,11 @@ class TurnLoop:
         fallback_path = Path(all_tools[0].name) if all_tools else Path(".")
         ctx = tool_context or ToolContext(workspace_root=fallback_path)
 
+        is_vision = task_class in ("vision_ocr", "vision")
         tools_schema = (
-            self.registry.to_ollama_tools(task_class) if supports_native_tools else None
+            self.registry.to_ollama_tools(task_class)
+            if (supports_native_tools and not is_vision)
+            else None
         )
         format_param = None
         options = None
@@ -270,37 +262,63 @@ class TurnLoop:
                     content = ""
                     tool_calls: list[dict[str, Any]] = []
 
-                    async for chunk in self.ollama.stream_chat(
-                        model=model_tag,
-                        messages=messages,
-                        tools=tools_schema,
-                        format=format_param,
-                        options=options,
-                    ):
-                        if self._cancelled:
-                            await self.checkpoint_partial_state(
-                                session_id, "cancelled", {"messages": messages}
-                            )
-                            return StopReason.CANCELLED, messages
+                    try:
+                        async for chunk in self.ollama.stream_chat(
+                            model=model_tag,
+                            messages=messages,
+                            tools=tools_schema,
+                            format=format_param,
+                            options=options,
+                        ):
+                            if self._cancelled:
+                                await self.checkpoint_partial_state(
+                                    session_id, "cancelled", {"messages": messages}
+                                )
+                                return StopReason.CANCELLED, messages
 
-                        msg = chunk.get("message", {})
-                        raw_think = msg.get("thinking") or ""
-                        raw_cont = msg.get("content") or ""
-                        d_think = raw_think.encode("utf-8", "replace").decode("utf-8")
-                        d_cont = raw_cont.encode("utf-8", "replace").decode("utf-8")
-                        thinking += d_think
-                        content += d_cont
+                            msg = chunk.get("message", {})
+                            raw_think = msg.get("thinking") or ""
+                            raw_cont = msg.get("content") or ""
+                            d_think = raw_think.encode("utf-8", "replace").decode("utf-8")
+                            d_cont = raw_cont.encode("utf-8", "replace").decode("utf-8")
+                            thinking += d_think
+                            content += d_cont
 
-                        if on_token and (d_cont or d_think):
-                            await on_token(d_cont, d_think)
+                            if on_token and (d_cont or d_think):
+                                await on_token(d_cont, d_think)
 
-                        if "tool_calls" in msg and msg["tool_calls"]:
-                            tool_calls.extend(msg["tool_calls"])
+                            if "tool_calls" in msg and msg["tool_calls"]:
+                                tool_calls.extend(msg["tool_calls"])
 
-                        if chunk.get("done", False):
-                            p_eval = chunk.get("prompt_eval_count", 0)
-                            eval_c = chunk.get("eval_count", 0)
-                            self.tracker.record_tokens(p_eval, eval_c)
+                            if chunk.get("done", False):
+                                p_eval = chunk.get("prompt_eval_count", 0)
+                                eval_c = chunk.get("eval_count", 0)
+                                self.tracker.record_tokens(p_eval, eval_c)
+
+                    except OllamaApiError as api_err:
+                        if "does not support tools" in str(api_err).lower() and tools_schema:
+                            tools_schema = None
+                            thinking, content, tool_calls = "", "", []
+                            async for chunk in self.ollama.stream_chat(
+                                model=model_tag,
+                                messages=messages,
+                                tools=None,
+                                format=format_param,
+                                options=options,
+                            ):
+                                msg = chunk.get("message", {})
+                                raw_think = msg.get("thinking") or ""
+                                raw_cont = msg.get("content") or ""
+                                d_think = raw_think.encode("utf-8", "replace").decode("utf-8")
+                                d_cont = raw_cont.encode("utf-8", "replace").decode("utf-8")
+                                thinking += d_think
+                                content += d_cont
+                                if on_token and (d_cont or d_think):
+                                    await on_token(d_cont, d_think)
+                                if chunk.get("done", False):
+                                    self.tracker.record_tokens(chunk.get("prompt_eval_count", 0), chunk.get("eval_count", 0))
+                        else:
+                            raise
 
             except asyncio.CancelledError:
                 self._cancelled = True

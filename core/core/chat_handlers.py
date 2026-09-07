@@ -1,10 +1,13 @@
 """Chat and Plan execution RPC handlers for SWARAJ Core."""
 
 import asyncio
+import base64
 import logging
 from pathlib import Path
 from typing import Any
 import uuid
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
 
 from agent.budget import RunBudget, RunBudgetTracker
 from agent.planner import PlanStep, Planner
@@ -24,24 +27,13 @@ class ChatManager:
     """Manages chat streaming, routing, permissions, and plan execution."""
 
     def __init__(
-        self,
-        model_registry: ModelRegistry,
-        tool_registry: ToolRegistry,
-        ollama_client: OllamaClient,
-        router: ModelRouter,
-        policy_engine: PolicyEngine,
-        send_notification_fn: Any,
-        send_response_fn: Any,
-        log_stderr_fn: Any,
+        self, model_registry: ModelRegistry, tool_registry: ToolRegistry,
+        ollama_client: OllamaClient, router: ModelRouter, policy_engine: PolicyEngine,
+        send_notification_fn: Any, send_response_fn: Any, log_stderr_fn: Any,
     ) -> None:
-        self.model_registry = model_registry
-        self.tool_registry = tool_registry
-        self.ollama = ollama_client
-        self.router = router
-        self.policy_engine = policy_engine
-        self.send_notification = send_notification_fn
-        self.send_response = send_response_fn
-        self.log_stderr = log_stderr_fn
+        self.model_registry, self.tool_registry = model_registry, tool_registry
+        self.ollama, self.router, self.policy_engine = ollama_client, router, policy_engine
+        self.send_notification, self.send_response, self.log_stderr = send_notification_fn, send_response_fn, log_stderr_fn
         self.active_streams: dict[Any, asyncio.Task[None]] = {}
         self.active_turn_loops: dict[str, TurnLoop] = {}
         self.active_permission_futures: dict[str, asyncio.Future[tuple[str, str | None]]] = {}
@@ -54,11 +46,8 @@ class ChatManager:
         fut: asyncio.Future[tuple[str, str | None]] = asyncio.get_running_loop().create_future()
         self.active_permission_futures[req_id] = fut
         self.send_notification("permission/request", {
-            "requestId": req_id,
-            "tool": tool,
-            "sideEffect": side_effect,
-            "description": description,
-            "resource": resource,
+            "requestId": req_id, "tool": tool, "sideEffect": side_effect,
+            "description": description, "resource": resource,
             "options": ["allow_once", "allow_session", "always_allow", "deny"],
         })
         try:
@@ -100,8 +89,23 @@ class ChatManager:
         except Exception:
             installed = set(self.model_registry.installed_tags())
 
-        has_image = any(isinstance(a, dict) and a.get("mime_type", "").startswith("image/") for a in attachments)
-        mimes = [a.get("mime_type", "") for a in attachments if isinstance(a, dict) and "mime_type" in a]
+        has_image = any(
+            isinstance(a, dict)
+            and (
+                a.get("mime_type", "").startswith("image/")
+                or Path(a.get("path") or a.get("name") or a.get("filename") or "").suffix.lower() in IMAGE_EXTENSIONS
+            )
+            for a in attachments
+        )
+        mimes = [
+            a.get("mime_type") or f"image/{Path(a.get('path', '')).suffix.lower().lstrip('.')}"
+            for a in attachments
+            if isinstance(a, dict)
+            and (
+                a.get("mime_type", "").startswith("image/")
+                or Path(a.get("path") or a.get("name") or a.get("filename") or "").suffix.lower() in IMAGE_EXTENSIONS
+            )
+        ]
 
         decision = self.router.route(prompt=user_prompt, has_image=has_image, mime_types=mimes or None, installed_tags=installed)
         model_tag, task_class = decision.selected_model_tag, decision.task_class
@@ -117,9 +121,10 @@ class ChatManager:
             "reasoning": f"Routed to {task_class} based on prompt features",
         })
 
-        # Extract and append attachment context into messages
+        # Extract and append attachment context and base64 images into messages
         if attachments:
-            attachment_contexts = []
+            attachment_contexts: list[str] = []
+            attached_images: list[str] = []
             for att in attachments:
                 if not isinstance(att, dict):
                     continue
@@ -129,7 +134,15 @@ class ChatManager:
                 if att_path:
                     p = Path(att_path)
                     if p.exists() and p.is_file():
-                        if p.suffix.lower() == ".pdf":
+                        suf = p.suffix.lower()
+                        if suf in IMAGE_EXTENSIONS:
+                            try:
+                                b64 = base64.b64encode(p.read_bytes()).decode("utf-8")
+                                attached_images.append(b64)
+                                attachment_contexts.append(f"### Attached Image: {att_name} ({p.name})")
+                            except Exception as e:
+                                attachment_contexts.append(f"### Attached Image: {att_name} (Failed to load: {e})")
+                        elif suf == ".pdf":
                             try:
                                 from pypdf import PdfReader
                                 r = PdfReader(str(p))
@@ -139,41 +152,35 @@ class ChatManager:
                                     clean_p = raw_p.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
                                     pdf_texts.append(f"--- Page {i+1} ---\n{clean_p}")
                                 attachment_contexts.append(
-                                    f"### Document: {att_name} ({p.name})\n"
-                                    + "\n\n".join(pdf_texts)
+                                    f"### Document: {att_name} ({p.name})\n" + "\n\n".join(pdf_texts)
                                 )
                             except Exception as e:
-                                attachment_contexts.append(
-                                    f"### Document: {att_name} (Failed to parse PDF: {e})"
-                                )
+                                attachment_contexts.append(f"### Document: {att_name} (Failed to parse PDF: {e})")
                         else:
                             try:
                                 txt = p.read_text(encoding="utf-8", errors="replace")
                                 clean_txt = txt.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                                attachment_contexts.append(
-                                    f"### File: {att_name}\n```\n{clean_txt[:24000]}\n```"
-                                )
+                                attachment_contexts.append(f"### File: {att_name}\n```\n{clean_txt[:24000]}\n```")
                             except Exception as e:
-                                attachment_contexts.append(
-                                    f"### File: {att_name} (Failed to read: {e})"
-                                )
+                                attachment_contexts.append(f"### File: {att_name} (Failed to read: {e})")
                 elif att_content:
                     clean_att = str(att_content).encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-                    attachment_contexts.append(
-                        f"### Document: {att_name}\n```\n{clean_att[:24000]}\n```"
-                    )
+                    attachment_contexts.append(f"### Document: {att_name}\n```\n{clean_att[:24000]}\n```")
 
-            if attachment_contexts:
+            if attachment_contexts or attached_images:
                 combined_context = (
-                    "The user has provided the following attached document context:\n\n"
-                    + "\n\n".join(attachment_contexts)
-                )
+                    "The user has provided the following attached context:\n\n" + "\n\n".join(attachment_contexts)
+                ) if attachment_contexts else ""
                 if messages and messages[-1].get("role") == "user":
-                    messages[-1]["content"] = (
-                        f"{combined_context}\n\n---\nUser Query: {messages[-1].get('content', '')}"
-                    )
+                    if combined_context:
+                        messages[-1]["content"] = f"{combined_context}\n\n---\nUser Query: {messages[-1].get('content', '')}"
+                    if attached_images:
+                        messages[-1]["images"] = attached_images
                 else:
-                    messages.append({"role": "user", "content": combined_context})
+                    msg_obj: dict[str, Any] = {"role": "user", "content": combined_context or user_prompt}
+                    if attached_images:
+                        msg_obj["images"] = attached_images
+                    messages.append(msg_obj)
 
         if session_id:
             try:
