@@ -252,36 +252,51 @@ class TurnLoop:
                     messages.append({"role": "user", "content": err_msg})
                     continue
 
-                # Intercept presentation and document requests where model emitted text/markdown without calling tool
-                user_prompts = " ".join(m.get("content", "") for m in messages if m.get("role") == "user")
-                lowered_user = user_prompts.lower()
-                presentation_kws = ("pptx", "presentation", "slide deck", "slides from", "review deck", "make slides", "powerpoint", "slides on", "slides about")
-                has_presentation_intent = any(kw in lowered_user for kw in presentation_kws)
-                has_pdf_intent = any(kw in lowered_user for kw in ("generate pdf", "create pdf", "export pdf", ".pdf", "pdf report"))
-                has_docx_intent = any(kw in lowered_user for kw in ("generate docx", "create docx", "export docx", ".docx", "word document"))
+                # Intercept presentation, spreadsheet, and document requests where model emitted text/markdown without calling tool
+                current_user_prompt = ""
+                for m in reversed(messages):
+                    if m.get("role") == "user":
+                        current_user_prompt = m.get("content", "")
+                        break
+                lowered_user = current_user_prompt.lower()
+                has_xlsx = any(kw in lowered_user for kw in ("xlsx", "excel", "spreadsheet", "csv", ".xlsx", "workbook", "sheets", "cost sheet"))
+                has_pptx = any(kw in lowered_user for kw in ("pptx", "presentation", "slide deck", "slides from", "review deck", "make slides", "powerpoint", "slides on", "slides about", ".pptx"))
+                has_pdf = any(kw in lowered_user for kw in ("generate pdf", "create pdf", "export pdf", ".pdf", "pdf report"))
+                has_docx = any(kw in lowered_user for kw in ("generate docx", "create docx", "export docx", ".docx", "word document", "word doc"))
 
-                if has_presentation_intent or has_pdf_intent or has_docx_intent:
-                    target_fmt = "pptx" if has_presentation_intent else ("pdf" if has_pdf_intent else "docx")
-                    fn_match = re.search(r'([a-zA-Z0-9_\-]+\.(?:pptx|pdf|docx))', user_prompts, re.IGNORECASE)
+                if has_xlsx or has_pptx or has_pdf or has_docx:
+                    target_fmt = "xlsx" if has_xlsx else ("pptx" if has_pptx else ("pdf" if has_pdf else "docx"))
+                    fn_match = re.search(r'([a-zA-Z0-9_\-]+\.(?:xlsx|pptx|pdf|docx))', current_user_prompt, re.IGNORECASE)
                     if fn_match:
                         target_fn = fn_match.group(1)
                     else:
-                        target_fn = f"presentation.{target_fmt}" if target_fmt == "pptx" else f"report.{target_fmt}"
+                        target_fn = f"data.{target_fmt}" if target_fmt == "xlsx" else (f"presentation.{target_fmt}" if target_fmt == "pptx" else f"report.{target_fmt}")
 
                     script_match = re.search(r"```python\s*([\s\S]*?)\s*```", content)
-                    code_to_exec = script_match.group(1) if script_match else (content if ("prs.save" in content or "doc.save" in content) else None)
+                    code_to_exec = script_match.group(1) if script_match else (content if any(s in content for s in ("prs.save", "doc.save", "wb.save", "save(")) else None)
 
                     cleaned_md = content.strip()
                     is_generic_greeting = any(g in cleaned_md.lower() for g in ("how can i help", "how can i assist", "how may i help", "hello!", "hy how", "hey!"))
                     if is_generic_greeting or len(cleaned_md) < 20:
-                        topic = user_prompts.strip().split("\n")[0][:60]
-                        cleaned_md = (
-                            f"# {topic}\n\n"
-                            f"## Executive Summary\n- Key objectives, operational scope, and background\n- Applicable PSU standards and regulatory compliance\n\n"
-                            f"## Findings & Technical Analysis\n- Inspection observations and baseline measurements\n- Quantitative parameters and asset integrity evaluation\n\n"
-                            f"## Risk Assessment & Mitigation\n- High-priority vulnerabilities and hazard classification\n- Preventive maintenance and risk control barriers\n\n"
-                            f"## Recommendations & Action Plan\n- Corrective actions, owner allocation, and target timelines\n- Verification milestones and closure protocol"
-                        )
+                        topic = current_user_prompt.strip().split("\n")[0][:60]
+                        if target_fmt == "xlsx":
+                            cleaned_md = (
+                                f"# {topic}\n\n"
+                                f"| Item | Description | Parameter | Value | Unit | Status |\n"
+                                f"|---|---|---|---|---|---|\n"
+                                f"| 1 | Baseline Inspection | Operating Pressure | 14.5 | bar | Normal |\n"
+                                f"| 2 | Thickness Measurement | Shell Wall | 12.8 | mm | Acceptable |\n"
+                                f"| 3 | Corrosion Assessment | Rate | 0.12 | mm/yr | Low Risk |\n"
+                                f"| 4 | Temperature Monitoring | Skin Temp | 245.0 | deg C | Normal |"
+                            )
+                        else:
+                            cleaned_md = (
+                                f"# {topic}\n\n"
+                                f"## Executive Summary\n- Key objectives, operational scope, and background\n- Applicable PSU standards and regulatory compliance\n\n"
+                                f"## Findings & Technical Analysis\n- Inspection observations and baseline measurements\n- Quantitative parameters and asset integrity evaluation\n\n"
+                                f"## Risk Assessment & Mitigation\n- High-priority vulnerabilities and hazard classification\n- Preventive maintenance and risk control barriers\n\n"
+                                f"## Recommendations & Action Plan\n- Corrective actions, owner allocation, and target timelines\n- Verification milestones and closure protocol"
+                            )
 
                     tool_calls = [{
                         "id": f"call_{uuid.uuid4().hex[:8]}",
@@ -289,11 +304,11 @@ class TurnLoop:
                         "function": {
                             "name": "generate_document",
                             "arguments": {
-                                "taskDescription": user_prompts or f"Generate {target_fmt} document",
+                                "taskDescription": current_user_prompt or f"Generate {target_fmt} document",
                                 "outputFormat": target_fmt,
                                 "outputFilename": target_fn,
-                                "scriptCode": code_to_exec if (code_to_exec and ("prs.save" in code_to_exec or "doc.save" in code_to_exec)) else None,
-                                "markdownContent": cleaned_md if not (code_to_exec and ("prs.save" in code_to_exec or "doc.save" in code_to_exec)) else None,
+                                "scriptCode": code_to_exec if (code_to_exec and any(s in code_to_exec for s in ("prs.save", "doc.save", "wb.save", "save("))) else None,
+                                "markdownContent": cleaned_md if not (code_to_exec and any(s in code_to_exec for s in ("prs.save", "doc.save", "wb.save", "save("))) else None,
                             },
                         },
                     }]

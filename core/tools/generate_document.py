@@ -28,6 +28,7 @@ from tools.doc_script_builder import (
     build_docx_script,
     build_pdf_script,
     build_pptx_script,
+    build_xlsx_script,
     normalize_typographic_punctuation,
 )
 from tools.workspace import verify_workspace_path
@@ -170,6 +171,8 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
             initial_script = build_docx_script(declared_name, content)
         elif not initial_script and fmt == "pptx" and content:
             initial_script = build_pptx_script(declared_name, content)
+        elif not initial_script and fmt == "xlsx" and content:
+            initial_script = build_xlsx_script(declared_name, content)
 
         if not initial_script:
             return ToolResult.failed("Missing required 'scriptCode' or content for document generation.")

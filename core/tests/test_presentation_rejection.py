@@ -103,3 +103,40 @@ def test_governance_boundary_protects_official_review_deck():
             task_description="Render slides for management review",
         )
 
+
+@pytest.mark.asyncio
+async def test_turn_loop_multi_turn_format_isolation(tmp_path):
+    """Verify XLSX request in a session with past PPTX turn isolates format to XLSX."""
+    registry = ToolRegistry()
+    registry.register(GenerateDocumentTool())
+
+    mock_ollama = MagicMock()
+    async def mock_stream_chat(*args, **kwargs):
+        yield {"message": {"content": "Here is the spreadsheet:\n| Component | Thickness |\n| Shell | 14.2 mm |"}, "done": True}
+    mock_ollama.stream_chat = mock_stream_chat
+
+    turn_loop = TurnLoop(
+        ollama_client=mock_ollama,
+        tool_registry=registry,
+        budget_tracker=RunBudgetTracker(budget=RunBudget(max_steps=5)),
+        permission_requester=AsyncMock(return_value=("allow_once", None)),
+    )
+
+    history = [
+        {"role": "user", "content": "create a presentation on refinery inspection"},
+        {"role": "assistant", "content": "Generated `presentation.pptx` in the workspace with system provenance attestation."},
+        {"role": "user", "content": "now generate an xlsx sheet of pipe thickness audit"},
+    ]
+
+    reason, updated_messages = await turn_loop.run_step(
+        session_id="test-session",
+        model_tag="test-model",
+        messages=history,
+        task_class="official_drafting",
+        tool_context=ToolContext(workspace_root=tmp_path),
+    )
+
+    assert (tmp_path / "data.xlsx").exists()
+    assert any("data.xlsx" in m.get("content", "") for m in updated_messages if m.get("role") == "assistant")
+
+
