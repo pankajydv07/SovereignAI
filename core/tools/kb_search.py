@@ -67,7 +67,7 @@ class KbSearchTool(BaseTool[KbSearchInput, KbSearchOutput]):
 
         async with db_mgr.connect() as conn:
             await db_mgr.initialize_schema(conn)
-            results = await engine.retrieve_chunks(
+            results, is_truncated, total_matches = await engine.retrieve_chunks(
                 conn,
                 user_role=args.user_role,
                 query=args.query,

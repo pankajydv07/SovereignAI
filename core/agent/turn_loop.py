@@ -4,7 +4,9 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import logging
 from pathlib import Path
+import re
 from typing import Any
+import uuid
 
 from agent.budget import RunBudgetTracker, StopReason
 from agent.policy import PolicyEngine
@@ -119,10 +121,10 @@ class TurnLoop:
             "- Use `glob` or `fs_list` to search and find files in the workspace.\n"
             "- Use `fs_read` to read any workspace file (it automatically converts Excel .xlsx/.csv spreadsheets, Word .docx, PPT .pptx, and PDF documents into clean Markdown tables and text).\n"
             "- Use `fs_write` to save output text files.\n"
-            "- Use `generate_document` to create and generate `.pdf`, `.docx`, `.xlsx`, and `.md` files directly in the workspace. Whenever the user asks to generate, create, or export a report, summary, document, or PDF, invoke `generate_document` (or `render_deliverable` for official PSU approval notes/memorandums) with `outputFormat` and `outputFilename`. Do not write the generating code in your chat reply.\n"
+            "- Use `generate_document` to create and generate `.pdf`, `.docx`, `.xlsx`, `.pptx`, and `.md` files directly in the workspace. Whenever the user asks to generate, create, or export a report, summary, presentation, slide deck, document, or PDF, invoke `generate_document` (or `render_deliverable` for official PSU approval notes/memorandums/review decks) with `outputFormat` and `outputFilename`. Do not write the generating code in your chat reply.\n"
             "CRITICAL:\n"
             "1. Never state or claim that you cannot open, view, or read binary files, Excel workbooks, or workspace files. Immediately invoke `glob` or `fs_read`.\n"
-            "2. Never state or claim that you cannot generate or produce PDF deliverables or documents directly from the workspace. Always call `generate_document` with `outputFormat='pdf'` (or `'docx'`) to create the file directly."
+            "2. Never state or claim that you cannot generate or produce PDF deliverables, presentations, or documents directly from the workspace. Always call `generate_document` with `outputFormat='pptx'` (or `'pdf'` / `'docx'`) to create the file directly."
         )
 
         def get_ollama_messages() -> list[dict[str, Any]]:
@@ -249,7 +251,54 @@ class TurnLoop:
                     )
                     messages.append({"role": "user", "content": err_msg})
                     continue
-                break
+
+                # Intercept presentation and document requests where model emitted text/markdown without calling tool
+                user_prompts = " ".join(m.get("content", "") for m in messages if m.get("role") == "user")
+                lowered_user = user_prompts.lower()
+                presentation_kws = ("pptx", "presentation", "slide deck", "slides from", "review deck", "make slides", "powerpoint", "slides on", "slides about")
+                has_presentation_intent = any(kw in lowered_user for kw in presentation_kws)
+                has_pdf_intent = any(kw in lowered_user for kw in ("generate pdf", "create pdf", "export pdf", ".pdf", "pdf report"))
+                has_docx_intent = any(kw in lowered_user for kw in ("generate docx", "create docx", "export docx", ".docx", "word document"))
+
+                if has_presentation_intent or has_pdf_intent or has_docx_intent:
+                    target_fmt = "pptx" if has_presentation_intent else ("pdf" if has_pdf_intent else "docx")
+                    fn_match = re.search(r'([a-zA-Z0-9_\-]+\.(?:pptx|pdf|docx))', user_prompts, re.IGNORECASE)
+                    if fn_match:
+                        target_fn = fn_match.group(1)
+                    else:
+                        target_fn = f"presentation.{target_fmt}" if target_fmt == "pptx" else f"report.{target_fmt}"
+
+                    script_match = re.search(r"```python\s*([\s\S]*?)\s*```", content)
+                    code_to_exec = script_match.group(1) if script_match else (content if ("prs.save" in content or "doc.save" in content) else None)
+
+                    cleaned_md = content.strip()
+                    is_generic_greeting = any(g in cleaned_md.lower() for g in ("how can i help", "how can i assist", "how may i help", "hello!", "hy how", "hey!"))
+                    if is_generic_greeting or len(cleaned_md) < 20:
+                        topic = user_prompts.strip().split("\n")[0][:60]
+                        cleaned_md = (
+                            f"# {topic}\n\n"
+                            f"## Executive Summary\n- Key objectives, operational scope, and background\n- Applicable PSU standards and regulatory compliance\n\n"
+                            f"## Findings & Technical Analysis\n- Inspection observations and baseline measurements\n- Quantitative parameters and asset integrity evaluation\n\n"
+                            f"## Risk Assessment & Mitigation\n- High-priority vulnerabilities and hazard classification\n- Preventive maintenance and risk control barriers\n\n"
+                            f"## Recommendations & Action Plan\n- Corrective actions, owner allocation, and target timelines\n- Verification milestones and closure protocol"
+                        )
+
+                    tool_calls = [{
+                        "id": f"call_{uuid.uuid4().hex[:8]}",
+                        "type": "function",
+                        "function": {
+                            "name": "generate_document",
+                            "arguments": {
+                                "taskDescription": user_prompts or f"Generate {target_fmt} document",
+                                "outputFormat": target_fmt,
+                                "outputFilename": target_fn,
+                                "scriptCode": code_to_exec if (code_to_exec and ("prs.save" in code_to_exec or "doc.save" in code_to_exec)) else None,
+                                "markdownContent": cleaned_md if not (code_to_exec and ("prs.save" in code_to_exec or "doc.save" in code_to_exec)) else None,
+                            },
+                        },
+                    }]
+                else:
+                    break
 
             tool_errors: list[str] = []
             executed_tools: list[dict[str, Any]] = []
@@ -284,6 +333,22 @@ class TurnLoop:
                     err_feedback_msg = f"Tool call error feedback: {error_feedback}. Please repair tool arguments and try again."
                     messages.append({"role": "user", "content": err_feedback_msg})
                     continue
+
+            # If document generation or deliverable rendering succeeded, complete the turn cleanly
+            deliverable_obs = [
+                obs for obs in executed_tools
+                if obs.get("tool_name") in ("generate_document", "render_deliverable") and obs.get("success", False)
+            ]
+            if deliverable_obs and not tool_errors:
+                messages.extend(executed_tools)
+                content_str = deliverable_obs[-1].get("content", "")
+                fn_match = re.search(r"file_path=['\"]?([^'\",\)]+)", content_str)
+                fn_name = Path(fn_match.group(1)).name if fn_match else "deliverable"
+                confirm_msg = f"Generated `{fn_name}` in the workspace with system provenance attestation."
+                if on_token:
+                    await on_token(confirm_msg, "")
+                messages.append({"role": "assistant", "content": confirm_msg})
+                return StopReason.END_TURN, messages
 
             if shared_repair_attempts > 0:
                 successful_assistant_turn = messages[-1]

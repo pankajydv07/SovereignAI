@@ -304,3 +304,8 @@
 {"prompt": "Draft a friendly reminder to clean up the shared workstation desk. -- Reference MRPL/INSP/2026/521.", "has_image": false, "mime_types": [], "expected_class": "other"}
 {"prompt": "Convert this text file from UTF-8 to ASCII encoding. -- Reference MRPL/INSP/2026/518.", "has_image": false, "mime_types": [], "expected_class": "other"}
 {"prompt": "[Refinery Unit 106] Fix TypeError: 'NoneType' object is not subscriptable in P&ID tag parser script.", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "create a management review deck", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "make slides from this report", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "generate a PPTX presentation", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Prepare a 5-slide management review deck summarizing boiler inspection observations.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Generate a PowerPoint presentation summarizing turnaround safety compliance.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}

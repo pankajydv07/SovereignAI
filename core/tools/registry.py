@@ -10,7 +10,7 @@ class ToolRegistry:
 
     # Default tool subsets per task class (max 6 tools per class for local model reliability)
     TASK_CLASS_MAP: dict[str, list[str]] = {
-        "official_drafting": ["fs_read", "fs_write", "render_deliverable", "calc_exec", "kb_search"],
+        "official_drafting": ["fs_read", "fs_write", "render_deliverable", "generate_document", "kb_search", "calc_exec"],
         "doc_summarise": ["fs_read", "fs_list", "glob", "fs_write", "generate_document", "kb_search"],
         "doc_extract": ["fs_read", "fs_list", "glob", "doc_ingest", "generate_document"],
         "code_generate": ["fs_read", "fs_list", "glob", "fs_write", "code_exec", "generate_document"],

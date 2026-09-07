@@ -601,3 +601,29 @@
 {"prompt": "Please proceed: Compute the hydrotest pressure required for crude storage tank T-102 per IS 803. (Priority: High)", "has_image": false, "mime_types": [], "expected_class": "engineering_calc"}
 {"prompt": "Implement a pandas function to clean equipment maintenance log dataset and export to Excel. [Asset Tag: FT-1725]", "has_image": false, "mime_types": [], "expected_class": "code_generate"}
 {"prompt": "Fix IndexError: list index out of range when parsing instrument tag list. [Asset Tag: FT-1747]", "has_image": false, "mime_types": [], "expected_class": "code_debug"}
+{"prompt": "create a management review deck", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "make slides from this report", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "generate a PPTX presentation", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Draft a management review slide deck for the annual turnaround. [Asset Tag: FT-1724]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Make a PPTX presentation summarizing the inspection findings and compliance status. [Asset Tag: FT-1735]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Create a slide deck from the plant inspection report for CGM review.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Draft a PowerPoint presentation for executive review of crude tank integrity.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Build a management review presentation deck from the audit results.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Generate slides for the quarterly technical review of refinery units.", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "Create an executive review presentation deck on turnaround milestones. [Asset Tag: FT-1750]", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "prepare a slide deck for turnaround review", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "make a presentation deck summarizing the inspection findings", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "create presentation slides from this technical report", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "draft a PowerPoint presentation for CGM executive review", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "generate PPTX slides for management review", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "create slides for quarterly technical review", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "build a presentation review deck from audit data", "has_image": false, "mime_types": [], "expected_class": "official_drafting"}
+{"prompt": "create an executive brief of this report", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "draft an executive brief summarizing plant inspection findings", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "generate an executive brief of the turnaround audit", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "generate a concise memo of the findings", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "create an executive brief", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "create an executive brief of the audit", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "generate an executive brief of the turnaround report", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "prepare an executive brief for the management", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}
+{"prompt": "draft a concise memo summarizing the findings", "has_image": false, "mime_types": [], "expected_class": "doc_summarise"}

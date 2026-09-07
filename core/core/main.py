@@ -32,6 +32,7 @@ structlog.configure(
 )
 
 from core.chat_handlers import ChatManager
+from core.deliverable_handlers import handle_deliverable_rpc
 from agent.policy import PolicyEngine
 from models.discovery import ModelDiscoverer
 from models.ollama import OllamaClient
@@ -141,56 +142,25 @@ def get_deliverable_store(
     return deliverable_stores[target_str]
 
 
+async def dispatch_rpc(data: dict[str, Any]) -> None:
+    """Process an asynchronous stdio JSON-RPC request."""
+    method = data.get("method", "")
+    msg_id = data.get("id")
+    params = data.get("params", {})
 
-async def handle_rpc_message(line: str) -> bool:
-    """Process a single stdio JSON-RPC line."""
     try:
-        data: dict[str, Any] = json.loads(line)
-        method = data.get("method")
-        msg_id = data.get("id")
-        params = data.get("params", {})
-
-        if method == "initialize":
-            send_rpc_response({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {
-                    "protocolVersion": SUPPORTED_PROTOCOL_VERSION,
-                    "version": "0.1.0",
-                    "status": "ready",
-                    "capabilities": {
-                        "agent_loop": True,
-                        "session_store": True,
-                        "tools": [t.name for t in tool_registry.list_all()],
-                    },
-                },
-            })
-            return True
-
-        if method == "ping":
-            send_rpc_response({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"status": "pong"},
-            })
-            return True
-
         if method == "session/new":
             p_id = params.get("projectId", "default-project")
             title = params.get("title")
             s_id = params.get("sessionId") or str(uuid.uuid4())
-            store = get_session_store(
-                params.get("projectPath"), params.get("dbPath")
-            )
+            store = get_session_store(params.get("projectPath"), params.get("dbPath"))
             res = await store.create_session(s_id, p_id, title)
             send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
-            return True
+            return
 
         if method == "session/load":
             s_id = params.get("sessionId")
-            store = get_session_store(
-                params.get("projectPath"), params.get("dbPath")
-            )
+            store = get_session_store(params.get("projectPath"), params.get("dbPath"))
             try:
                 s_info = await store.get_session(s_id)
                 events = await store.load_session_events(s_id)
@@ -205,29 +175,25 @@ async def handle_rpc_message(line: str) -> bool:
                     "id": msg_id,
                     "error": {"code": -32004, "message": str(err)},
                 })
-            return True
+            return
 
         if method == "session/list":
-            store = get_session_store(
-                params.get("projectPath"), params.get("dbPath")
-            )
+            store = get_session_store(params.get("projectPath"), params.get("dbPath"))
             sessions = await store.list_sessions(params.get("projectId"))
             send_rpc_response({
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {"sessions": sessions},
             })
-            return True
+            return
 
         if method == "chat/stream":
-            store = get_session_store(
-                params.get("projectPath"), params.get("dbPath")
-            )
+            store = get_session_store(params.get("projectPath"), params.get("dbPath"))
             task = asyncio.create_task(
                 chat_manager.handle_chat_stream(msg_id, params, store)
             )
             chat_manager.active_streams[msg_id] = task
-            return True
+            return
 
         if method == "chat/stop":
             target_id = str(params.get("id") or params.get("sessionId"))
@@ -237,7 +203,7 @@ async def handle_rpc_message(line: str) -> bool:
                 "id": msg_id,
                 "result": {"status": "stopped", "target_id": target_id},
             })
-            return True
+            return
 
         if method == "permission/respond":
             req_id = params.get("requestId", "")
@@ -249,17 +215,15 @@ async def handle_rpc_message(line: str) -> bool:
                 "id": msg_id,
                 "result": {"status": "acknowledged", "requestId": req_id},
             })
-            return True
+            return
 
         if method == "plan/run":
-            store = get_session_store(
-                params.get("projectPath"), params.get("dbPath")
-            )
+            store = get_session_store(params.get("projectPath"), params.get("dbPath"))
             task = asyncio.create_task(
                 chat_manager.handle_plan_run(msg_id, params, store)
             )
             chat_manager.active_streams[msg_id] = task
-            return True
+            return
 
         if method == "models/roster":
             discoverer = ModelDiscoverer(ollama_client)
@@ -296,73 +260,64 @@ async def handle_rpc_message(line: str) -> bool:
                 "id": msg_id,
                 "result": {"fulfilment": fulfilment, "models": roster_models},
             })
-            return True
+            return
 
-        if method == "deliverable/create":
+        if method.startswith("deliverable/"):
             dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            deliv_data = params.get("deliverable", {})
-            created = await dstore.create_deliverable(deliv_data)
-            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": created}})
+            handled = await handle_deliverable_rpc(
+                method, msg_id, params, dstore, send_rpc_response
+            )
+            if handled:
+                return
+
+        if msg_id is not None:
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32601, "message": f"Method not found: {method}"},
+            })
+
+    except Exception as err:
+        log_stderr(f"Error handling RPC method {method}: {err}")
+        if msg_id is not None:
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32000, "message": str(err)},
+            })
+
+
+def handle_rpc_message(line: str) -> bool:
+    """Process a single stdio JSON-RPC line immediately or dispatch as task."""
+    try:
+        data: dict[str, Any] = json.loads(line)
+        method = data.get("method")
+        msg_id = data.get("id")
+
+        if method == "initialize":
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "protocolVersion": SUPPORTED_PROTOCOL_VERSION,
+                    "version": "0.1.0",
+                    "status": "ready",
+                    "capabilities": {
+                        "agent_loop": True,
+                        "session_store": True,
+                        "tools": [t.name for t in tool_registry.list_all()],
+                    },
+                },
+            })
             return True
 
-        if method == "deliverable/list":
-            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            p_id = params.get("projectId")
-            deliverables = await dstore.list_deliverables(p_id, params.get("sessionId"))
-            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverables": deliverables}})
+        if method == "ping":
+            send_rpc_response({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"status": "pong"},
+            })
             return True
-
-        if method == "deliverable/get":
-            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            d_id = params.get("deliverableId")
-            d = await dstore.get_deliverable(d_id) if d_id else None
-            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": d}})
-            return True
-
-        if method == "deliverable/verify_field":
-            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            d_id = params.get("deliverableId", "")
-            f_id = params.get("fieldId", "")
-            res = await dstore.verify_field(d_id, f_id)
-            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": res}})
-            return True
-
-        if method == "deliverable/cite_claim":
-            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            d_id = params.get("deliverableId", "")
-            c_id = params.get("citationId", "")
-            res = await dstore.cite_claim(d_id, c_id)
-            send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": {"deliverable": res}})
-            return True
-
-        if method == "deliverable/approve":
-            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            d_id = params.get("deliverableId", "")
-            checker_id = params.get("checkerId", "user_kulkarni")
-            checker_name = params.get("checkerName", "P. V. Kulkarni")
-            checker_desig = params.get("checkerDesignation", "Chief Manager - Mechanical")
-            narrative = params.get("editedNarrative")
-            try:
-                res = await dstore.approve(d_id, checker_id, checker_name, checker_desig, narrative)
-                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
-            except Exception as err:
-                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32000, "message": str(err)}})
-            return True
-
-        if method == "deliverable/reject":
-            dstore = get_deliverable_store(params.get("projectPath"), params.get("dbPath"))
-            d_id = params.get("deliverableId", "")
-            checker_id = params.get("checkerId", "user_kulkarni")
-            checker_name = params.get("checkerName", "P. V. Kulkarni")
-            checker_desig = params.get("checkerDesignation", "Chief Manager - Mechanical")
-            reason = params.get("reason", "")
-            try:
-                res = await dstore.reject(d_id, checker_id, checker_name, checker_desig, reason)
-                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
-            except Exception as err:
-                send_rpc_response({"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32000, "message": str(err)}})
-            return True
-
 
         if method == "shutdown":
             for task in chat_manager.active_streams.values():
@@ -374,12 +329,8 @@ async def handle_rpc_message(line: str) -> bool:
             })
             return False
 
-        if msg_id is not None:
-            send_rpc_response({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "error": {"code": -32601, "message": f"Method not found: {method}"},
-            })
+        # Dispatch other methods as asynchronous tasks to prevent blocking stdio reading
+        asyncio.create_task(dispatch_rpc(data))
 
     except Exception as err:
         log_stderr(f"Error processing RPC line: {err}")
@@ -397,7 +348,7 @@ async def main() -> None:
             break
         trimmed = line.strip()
         if trimmed:
-            should_continue = await handle_rpc_message(trimmed)
+            should_continue = handle_rpc_message(trimmed)
             if not should_continue:
                 break
 

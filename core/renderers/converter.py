@@ -128,6 +128,12 @@ class DocxToPdfConverter:
             run_id=run_id,
         )
 
+        fonts_dir = Path(__file__).parent / "fonts"
+        proc_env = os.environ.copy()
+        if fonts_dir.exists():
+            sep = ";" if os.name == "nt" else ":"
+            proc_env["SAL_FONTPATH"] = f"{fonts_dir.resolve()}{sep}{proc_env.get('SAL_FONTPATH', '')}"
+
         try:
             proc = subprocess.run(
                 cmd,
@@ -135,6 +141,7 @@ class DocxToPdfConverter:
                 text=True,
                 timeout=timeout_s,
                 check=False,
+                env=proc_env,
             )
             if proc.returncode != 0:
                 err_msg = proc.stderr or proc.stdout

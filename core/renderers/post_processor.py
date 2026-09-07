@@ -89,6 +89,25 @@ def scan_for_provenance_spoofing(file_path: Path, output_format: str) -> None:
             )
 
 
+RAW_MARKDOWN_STRUCTURAL_PATTERNS = [
+    (re.compile(r"^#{1,6}\s", re.MULTILINE), "Markdown heading marker"),
+    (re.compile(r"\|[\s\-:]+\|"), "Markdown table delimiter row"),
+    (re.compile(r"\*\*.+?\*\*"), "Markdown bold markers"),
+]
+
+
+def assert_zero_raw_markdown(text: str, doc_type: str = "document") -> None:
+    """Ensure no raw structural Markdown was dumped directly into native document runs."""
+    for pat, desc in RAW_MARKDOWN_STRUCTURAL_PATTERNS:
+        match = pat.search(text)
+        if match:
+            raise DocumentValidationError(
+                f"Generated {doc_type} contains unparsed {desc}: '{match.group(0)}'. "
+                "The generator must emit native document elements (headings, tables, bold runs) "
+                "rather than verbatim Markdown syntax."
+            )
+
+
 def validate_generated_document(
     file_path: Path,
     output_format: str,
@@ -132,6 +151,12 @@ def validate_generated_document(
             if p_count == 0 and t_count == 0:
                 raise DocumentValidationError("DOCX has zero paragraphs and zero tables")
 
+            full_text = "\n".join([p.text for p in doc.paragraphs])
+            for t in doc.tables:
+                for row in t.rows:
+                    full_text += "\n" + " ".join([c.text for c in row.cells])
+            assert_zero_raw_markdown(full_text, "DOCX")
+
             if expects_full_tabulation and expected_row_count > 0:
                 if total_table_rows < expected_row_count:
                     raise DocumentValidationError(
@@ -157,6 +182,12 @@ def validate_generated_document(
             if row_count < 1:
                 raise DocumentValidationError("XLSX active worksheet has no rows")
 
+            sheet_text = ""
+            for sheet in wb.worksheets:
+                for row in sheet.iter_rows(values_only=True):
+                    sheet_text += "\n" + " ".join([str(v) for v in row if v is not None])
+            assert_zero_raw_markdown(sheet_text, "XLSX")
+
             if expects_full_tabulation and expected_row_count > 0:
                 if row_count < expected_row_count:
                     raise DocumentValidationError(
@@ -175,6 +206,13 @@ def validate_generated_document(
             metrics["slides"] = slide_count
             if slide_count < 1:
                 raise DocumentValidationError("PPTX contains zero slides")
+
+            prs_text = ""
+            for slide in prs.slides:
+                for shape in slide.shapes:
+                    if shape.has_text_frame:
+                        prs_text += "\n" + shape.text_frame.text
+            assert_zero_raw_markdown(prs_text, "PPTX")
         except Exception as exc:
             if isinstance(exc, DocumentValidationError):
                 raise
@@ -213,182 +251,33 @@ def validate_generated_document(
     return metrics
 
 
-def _inject_docx_provenance(file_path: Path, prov: SystemProvenanceMetadata) -> None:
-    doc: DocumentClass = Document(str(file_path))
-    sources_str = ", ".join(prov.sources_cited) if prov.sources_cited else "None"
-    for section in doc.sections:
-        footer = section.footer
-        p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.text = ""
-
-        banner = p.add_run(f"*** {prov.draft_warning} ***\n")
-        banner.bold = True
-        banner.font.size = Pt(8.5)
-        banner.font.color.rgb = RGBColor(0xEF, 0x44, 0x44)
-
-        info = p.add_run(
-            f"Run ID: {prov.run_id} | Models: {', '.join(prov.models_used)} | "
-            f"Min Conf: {prov.min_confidence:.2f} | Sources: {sources_str}"
-        )
-        info.font.size = Pt(7.5)
-        info.font.color.rgb = RGBColor(0x57, 0x60, 0x6A)
-
-    doc.save(str(file_path))
-
-
-def _inject_xlsx_provenance(file_path: Path, prov: SystemProvenanceMetadata) -> None:
-    wb = openpyxl.load_workbook(str(file_path))
-    ws_name = "_Attestation_Provenance"
-    if ws_name in wb.sheetnames:
-        del wb[ws_name]
-
-    ws = wb.create_sheet(title=ws_name)
-    ws.views.sheetView[0].showGridLines = True
-
-    # Title header
-    ws["A1"] = "SWARAJ SYSTEM PROVENANCE ATTESTATION"
-    ws["A1"].font = Font(name="Arial", size=11, bold=True, color="1F2328")
-    ws["A1"].fill = PatternFill(start_color="D0D7DE", end_color="D0D7DE", fill_type="solid")
-
-    meta_rows = [
-        ("Draft Warning", prov.draft_warning),
-        ("Run ID", prov.run_id),
-        ("Models Used", ", ".join(prov.models_used)),
-        ("Sources Cited", ", ".join(prov.sources_cited) if prov.sources_cited else "None"),
-        ("Minimum Confidence", f"{prov.min_confidence:.2f}"),
-        ("Human Verified Count", str(prov.human_verified_count)),
-        ("Generated At", prov.timestamp_utc),
-    ]
-
-    for idx, (label, val) in enumerate(meta_rows, start=3):
-        ws.cell(row=idx, column=1, value=label).font = Font(
-            name="Arial", size=9, bold=True, color="57606A"
-        )
-        ws.cell(row=idx, column=2, value=val).font = Font(name="Arial", size=9, color="1F2328")
-
-    ws.column_dimensions["A"].width = 24
-    ws.column_dimensions["B"].width = 60
-
-    wb.save(str(file_path))
-
-
-def _inject_pptx_provenance(file_path: Path, prov: SystemProvenanceMetadata) -> None:
-    prs = Presentation(str(file_path))
-    blank_layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[0]
-    slide = prs.slides.add_slide(blank_layout)
-
-    # Background box
-    bg = slide.shapes.add_shape(1, Inches(0.5), Inches(0.5), Inches(9.0), Inches(6.5))
-    bg.fill.solid()
-    bg.fill.fore_color.rgb = PptxRGBColor(0x12, 0x18, 0x21)
-    bg.line.color.rgb = PptxRGBColor(0x26, 0x32, 0x41)
-
-    tx_box = slide.shapes.add_textbox(Inches(1.0), Inches(1.0), Inches(8.0), Inches(5.0))
-    tf = tx_box.text_frame
-    tf.word_wrap = True
-
-    p_hdr = tf.paragraphs[0]
-    p_hdr.text = f"*** {prov.draft_warning} ***"
-    p_hdr.font.size = PptxPt(13)
-    p_hdr.font.bold = True
-    p_hdr.font.color.rgb = PptxRGBColor(0xEF, 0x44, 0x44)
-
-    p_title = tf.add_paragraph()
-    p_title.text = "System Provenance & Attestation Record"
-    p_title.font.size = PptxPt(16)
-    p_title.font.bold = True
-    p_title.font.color.rgb = PptxRGBColor(0xE6, 0xED, 0xF3)
-
-    records = [
-        f"Run ID: {prov.run_id}",
-        f"Models Used: {', '.join(prov.models_used)}",
-        f"Sources Cited: {', '.join(prov.sources_cited) if prov.sources_cited else 'None'}",
-        f"Minimum Confidence: {prov.min_confidence:.2f}",
-        f"Human Verified Count: {prov.human_verified_count}",
-        f"Timestamp (UTC): {prov.timestamp_utc}",
-    ]
-    for rec in records:
-        p = tf.add_paragraph()
-        p.text = f"• {rec}"
-        p.font.size = PptxPt(10)
-        p.font.color.rgb = PptxRGBColor(0x9A, 0xA7, 0xB4)
-
-    prs.save(str(file_path))
-
-
-def _inject_pdf_provenance(file_path: Path, prov: SystemProvenanceMetadata) -> None:
-    reader = PdfReader(str(file_path))
-    writer = PdfWriter()
-    sources_str = ", ".join(prov.sources_cited) if prov.sources_cited else "None"
-    meta_line = (
-        f"Run ID: {prov.run_id} | Models: {', '.join(prov.models_used)} | "
-        f"Min Conf: {prov.min_confidence:.2f} | Sources: {sources_str}"
-    )
-
-    for _idx, page in enumerate(reader.pages):
-        page_width = float(page.mediabox.width)
-        page_height = float(page.mediabox.height)
-
-        # Generate transparent overlay canvas matching exact page dimensions
-        overlay_buffer = BytesIO()
-        c = canvas.Canvas(overlay_buffer, pagesize=(page_width, page_height))
-
-        # Bottom footer
-        c.setFont("Helvetica-Bold", 7.5)
-        c.setFillColor(HexColor("#EF4444"))
-        c.drawCentredString(page_width / 2.0, 24, f"*** {prov.draft_warning} ***")
-
-        c.setFont("Helvetica", 6.5)
-        c.setFillColor(HexColor("#57606A"))
-        c.drawCentredString(page_width / 2.0, 12, meta_line)
-        c.save()
-
-        overlay_buffer.seek(0)
-        overlay_reader = PdfReader(overlay_buffer)
-        overlay_page = overlay_reader.pages[0]
-
-        page.merge_page(overlay_page)
-        writer.add_page(page)
-
-
-    with open(str(file_path), "wb") as f_out:
-        writer.write(f_out)
-
-
-def _inject_md_provenance(file_path: Path, prov: SystemProvenanceMetadata) -> None:
-    content = file_path.read_text(encoding="utf-8")
-    provenance_block = (
-        f"\n\n---\n"
-        f"**PROVENANCE ATTESTATION**\n"
-        f"- Warning: `{prov.draft_warning}`\n"
-        f"- Run ID: `{prov.run_id}`\n"
-        f"- Models Used: `{', '.join(prov.models_used)}`\n"
-        f"- Sources Cited: `{', '.join(prov.sources_cited) if prov.sources_cited else 'None'}`\n"
-        f"- Min Confidence: `{prov.min_confidence:.2f}`\n"
-        f"- Timestamp: `{prov.timestamp_utc}`\n"
-    )
-    file_path.write_text(content + provenance_block, encoding="utf-8")
-
-
 def inject_system_provenance(
     file_path: Path,
     output_format: str,
     prov: SystemProvenanceMetadata,
 ) -> Path:
     """Inject authoritative system provenance attestation into the validated document."""
+    from renderers.provenance_injector import (
+        inject_docx_provenance,
+        inject_md_provenance,
+        inject_pdf_provenance,
+        inject_pptx_provenance,
+        inject_xlsx_provenance,
+    )
+
     fmt = output_format.lower().strip()
     if fmt == "docx":
-        _inject_docx_provenance(file_path, prov)
+        inject_docx_provenance(file_path, prov)
     elif fmt == "xlsx":
-        _inject_xlsx_provenance(file_path, prov)
+        inject_xlsx_provenance(file_path, prov)
     elif fmt == "pptx":
-        _inject_pptx_provenance(file_path, prov)
+        inject_pptx_provenance(file_path, prov)
     elif fmt == "pdf":
-        _inject_pdf_provenance(file_path, prov)
+        inject_pdf_provenance(file_path, prov)
     elif fmt == "md":
-        _inject_md_provenance(file_path, prov)
+        inject_md_provenance(file_path, prov)
     else:
         raise ValueError(f"Unsupported format for provenance injection: {fmt}")
 
     return file_path
+

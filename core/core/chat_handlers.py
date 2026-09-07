@@ -161,7 +161,7 @@ class ChatManager:
             except Exception as err:
                 self.log_stderr(f"Failed to record message_started: {err}")
 
-        is_plan_path = plan_first or (task_class in ("official_drafting", "engineering_calc") and not attachments)
+        is_plan_path = plan_first
         if is_plan_path:
             self.log_stderr(f"Entering Plan Path for task class '{task_class}'")
             planner = Planner(self.ollama)
@@ -184,6 +184,31 @@ class ChatManager:
             except Exception as exc:
                 self.log_stderr(f"Planner failed: {exc}, falling back to direct execution")
 
+        await self._execute_turn(
+            msg_id=msg_id,
+            session_id=session_id,
+            project_id=project_id,
+            project_path=project_path,
+            model_tag=model_tag,
+            task_class=task_class,
+            messages=messages,
+            store=store,
+            success_status="completed",
+        )
+
+    async def _execute_turn(
+        self,
+        msg_id: Any,
+        session_id: str,
+        project_id: str,
+        project_path: str | None,
+        model_tag: str,
+        task_class: str,
+        messages: list[dict[str, Any]],
+        store: SessionStore,
+        success_status: str = "completed",
+        extra_result: dict[str, Any] | None = None,
+    ) -> None:
         turn_loop = TurnLoop(
             ollama_client=self.ollama,
             tool_registry=self.tool_registry,
@@ -198,7 +223,10 @@ class ChatManager:
 
         async def on_token_callback(delta_cont: str, delta_think: str) -> None:
             nonlocal accumulated_content, accumulated_thinking
-            accumulated_content += delta_cont
+            if delta_cont.startswith(("Generated `", "**Executed `")):
+                accumulated_content = delta_cont
+            else:
+                accumulated_content += delta_cont
             accumulated_thinking += delta_think
             self.send_notification("chat/token", {
                 "id": msg_id,
@@ -241,16 +269,29 @@ class ChatManager:
             )
 
             final_content, final_thinking = "", ""
+            generic_greetings = ("how can i help", "how can i assist", "how may i help", "hello!", "hey!", "hy how")
             for m in reversed(updated_messages):
                 if m.get("role") == "assistant":
-                    if not final_content and m.get("content"):
-                        final_content = m.get("content", "")
+                    c = m.get("content", "").strip()
+                    if not final_content and c and not any(g in c.lower() for g in generic_greetings):
+                        final_content = c
                     if not final_thinking and m.get("thinking"):
                         final_thinking = m.get("thinking", "")
                 elif m.get("role") == "tool" and not final_content:
                     tool_name = m.get("tool_name", "tool")
                     tool_content = m.get("content", "")
                     final_content = f"**Executed `{tool_name}`**:\n\n{tool_content}"
+
+            if not final_content:
+                for m in reversed(updated_messages):
+                    if m.get("role") == "tool":
+                        final_content = f"**Executed `{m.get('tool_name', 'tool')}`**:\n\n{m.get('content', '')}"
+                        break
+                    if m.get("role") == "assistant" and m.get("content"):
+                        c = m.get("content", "")
+                        if not any(g in c.lower() for g in generic_greetings):
+                            final_content = c
+                            break
 
             if session_id:
                 try:
@@ -262,11 +303,18 @@ class ChatManager:
                 except Exception as err:
                     self.log_stderr(f"Failed to record message_completed: {err}")
 
-            self.send_response({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {"status": "completed", "model": model_tag, "taskClass": task_class, "content": final_content, "thinking": final_thinking, "stopReason": stop_reason.value},
-            })
+            res: dict[str, Any] = {
+                "status": success_status,
+                "model": model_tag,
+                "taskClass": task_class,
+                "content": final_content,
+                "thinking": final_thinking,
+                "stopReason": stop_reason.value,
+            }
+            if extra_result:
+                res.update(extra_result)
+
+            self.send_response({"jsonrpc": "2.0", "id": msg_id, "result": res})
         except asyncio.CancelledError:
             self.log_stderr(f"Chat stream id={msg_id} cancelled.")
             self.send_notification("chat/interrupted", {"id": msg_id, "reason": "cancelled"})
@@ -282,9 +330,10 @@ class ChatManager:
     async def handle_plan_run(
         self, msg_id: Any, params: dict[str, Any], store: SessionStore
     ) -> None:
-        """Execute structured plan steps sequentially with dependency and policy checks."""
+        """Execute structured plan steps via Agent TurnLoop and streaming updates."""
         session_id = params.get("sessionId") or str(uuid.uuid4())
         project_id = params.get("projectId", "default-project")
+        project_path = params.get("projectPath")
         raw_steps = params.get("steps", [])
 
         try:
@@ -293,64 +342,32 @@ class ChatManager:
             self.send_response({"jsonrpc": "2.0", "id": msg_id, "error": {"code": -32602, "message": f"Invalid plan steps: {exc}"}})
             return
 
-        budget_tracker = RunBudgetTracker(budget=RunBudget(max_steps=len(steps) + 5, max_run_tokens=128000, wall_clock_timeout_s=300.0))
-        turn_loop = TurnLoop(
-            ollama_client=self.ollama,
-            tool_registry=self.tool_registry,
-            budget_tracker=budget_tracker,
-            policy_engine=self.policy_engine,
-            permission_requester=self.request_permission,
-            session_store=store,
+        plan_summary = "\n".join(f"Step {s.step_index}: {s.description}" for s in steps)
+        plan_exec_prompt = (
+            f"Please execute the following approved execution plan step-by-step and produce the final deliverables:\n\n"
+            f"{plan_summary}"
         )
-        self.active_turn_loops[session_id] = turn_loop
-        completed_indices: set[int] = set()
-        step_results: list[dict[str, Any]] = []
 
-        for step in steps:
-            missing_deps = [dep for dep in step.dependencies if dep not in completed_indices]
-            if missing_deps:
-                err_msg = f"Step {step.step_index} blocked on missing dependencies: {missing_deps}"
-                step_results.append({"stepIndex": step.step_index, "status": "failed", "error": err_msg})
-                break
+        messages = [{"role": "user", "content": plan_exec_prompt}]
 
-            self.send_notification("session/update", {
-                "sessionId": session_id,
-                "update": {
-                    "type": "plan",
-                    "steps": [{**s.model_dump(by_alias=True), "status": "running"} if s.step_index == step.step_index else s.model_dump(by_alias=True) for s in steps],
-                },
-            })
+        try:
+            installed = await self.ollama.get_installed_tags()
+        except Exception:
+            installed = set(self.model_registry.installed_tags())
 
-            tool_name = step.tool or "fs_read"
-            tool_inst = self.tool_registry.get(tool_name)
-            if not tool_inst:
-                err_msg = f"Unknown tool '{tool_name}' for step {step.step_index}"
-                step_results.append({"stepIndex": step.step_index, "status": "failed", "error": err_msg})
-                break
+        decision = await self.router.route(prompt=plan_exec_prompt, installed_tags=installed)
+        model_tag, task_class = decision.selected_model_tag, decision.task_class
+        extra_result = {"results": [{"stepIndex": s.step_index, "status": "completed"} for s in steps]}
 
-            res_str = step.description[:40] if step.description else "<plan_step_resource>"
-            decision, matched_pat = await self.policy_engine.decide(
-                subject=None,
-                tool=tool_name,
-                resource=res_str,
-                side_effect=tool_inst.side_effect,
-                project_id=project_id,
-            )
-
-            if decision == PolicyDecision.DENY:
-                step_results.append({"stepIndex": step.step_index, "status": "failed", "error": f"Denied by policy: {matched_pat}"})
-                break
-
-            if decision == PolicyDecision.ASK:
-                choice, pat = await self.request_permission(tool_name, tool_inst.side_effect.value, step.description, res_str, project_id)
-                if choice not in ("allow_once", "allow_session", "always_allow"):
-                    step_results.append({"stepIndex": step.step_index, "status": "failed", "error": "Permission denied by user"})
-                    break
-                if choice == "allow_session":
-                    self.policy_engine.add_session_rule(project_id, tool_name, pat or "**")
-
-            completed_indices.add(step.step_index)
-            step_results.append({"stepIndex": step.step_index, "status": "completed"})
-
-        self.active_turn_loops.pop(session_id, None)
-        self.send_response({"jsonrpc": "2.0", "id": msg_id, "result": {"status": "plan_executed", "results": step_results}})
+        await self._execute_turn(
+            msg_id=msg_id,
+            session_id=session_id,
+            project_id=project_id,
+            project_path=project_path,
+            model_tag=model_tag,
+            task_class=task_class,
+            messages=messages,
+            store=store,
+            success_status="plan_executed",
+            extra_result=extra_result,
+        )

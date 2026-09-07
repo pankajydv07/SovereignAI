@@ -112,6 +112,8 @@ def extract_words_tesseract(pil_img: Image.Image, page_num: int) -> list[Extract
             continue
 
         conf_float = max(0.0, min(1.0, float(raw_conf) / 100.0))
+        if "\ufffd" in text:
+            conf_float = 0.0
 
         left = float(data["left"][i])
         top = float(data["top"][i])

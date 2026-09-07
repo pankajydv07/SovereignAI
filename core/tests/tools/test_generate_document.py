@@ -184,12 +184,12 @@ prs.save("out/turnaround.pptx")
 
     res = await tool.run(inp, test_ctx)
     assert res.success
-    data: GenerateDocumentOutput = res.output  # type: ignore[assignment]
-    assert data.output_format == "pptx"
-
-    prs = Presentation(data.file_path)
-    # Title slide + System Attestation closing slide = 2 slides
-    assert len(prs.slides) == 2
+    assert Path(res.output.file_path).exists()
+    prs_out = Presentation(res.output.file_path)
+    assert len(prs_out.slides) >= 2  # 1 content slide + 1 provenance slide
+    assert "Refinery Turnaround Q3 Review" in prs_out.slides[0].shapes.title.text
+    prov_text = " ".join([s.text_frame.text for s in prs_out.slides[-1].shapes if s.has_text_frame])
+    assert "System Provenance" in prov_text or "Run ID" in prov_text
 
 
 @pytest.mark.asyncio
@@ -390,3 +390,21 @@ async def test_cardinality_validation_enforcement(tmp_path: Path):
         expects_full_tabulation=False,
     )
     assert metrics["tables"] == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_document_pptx_ast_builder_auto(test_ctx: ToolContext, test_sandbox_rpc):
+    """Test generating PPTX automatically via build_pptx_script when scriptCode is None."""
+    tool = GenerateDocumentTool(rpc_runner=test_sandbox_rpc)
+    inp = GenerateDocumentInput(
+        taskDescription="# Refinery Q3 Review\n\n## Key Observations\n- Furnace F-101 tube thinning\n- Column C-102 tray fouling\n\n## Action Items\n| Action | Owner | Deadline |\n| Replacement | Inspection Lead | 15-Oct-2026 |",
+        outputFormat="pptx",
+        outputFilename="q3_review.pptx",
+    )
+
+    res = await tool.run(inp, test_ctx)
+    assert res.success
+    assert Path(res.output.file_path).exists()
+    prs_out = Presentation(res.output.file_path)
+    assert len(prs_out.slides) >= 3  # Title slide, 2 content slides, plus closing provenance slide
+

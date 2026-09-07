@@ -54,8 +54,11 @@ class Planner:
             {
                 "role": "system",
                 "content": (
-                    "You are a structured planner for industrial confidential tasks. "
-                    "Analyze prompt and output step-by-step execution plan."
+                    "You are a structured planner for SWARAJ industrial workbench. "
+                    "Analyze the prompt and output a concise step-by-step execution plan (3-6 steps max). "
+                    "Allowed tools for 'tool': 'generate_document', 'render_deliverable', 'fs_read', 'fs_write', 'fs_list', 'glob', 'kb_search', 'calc_exec', 'code_exec'. "
+                    "Allowed 'sideEffect': 'read', 'write', 'exec'. "
+                    "Never use external software names like PowerPoint or Excel as tools. For slides/decks or documents, use 'generate_document'."
                 ),
             },
             {"role": "user", "content": prompt},
@@ -70,9 +73,34 @@ class Planner:
         ):
             full_content += chunk.get("message", {}).get("content", "")
 
+        valid_tools = {
+            "generate_document",
+            "render_deliverable",
+            "fs_read",
+            "fs_write",
+            "fs_list",
+            "glob",
+            "kb_search",
+            "calc_exec",
+            "code_exec",
+            "doc_ingest",
+        }
+
         try:
             data = json.loads(full_content)
             plan_payload = PlanPayload.model_validate(data)
+            for step in plan_payload.steps:
+                if step.tool not in valid_tools:
+                    desc_lower = step.description.lower()
+                    if any(w in desc_lower for w in ("generate", "create", "export", "slide", "pptx", "pdf", "deck", "doc")):
+                        step.tool = "generate_document"
+                        step.side_effect = "write"
+                    elif any(w in desc_lower for w in ("save", "write", "record")):
+                        step.tool = "fs_write"
+                        step.side_effect = "write"
+                    else:
+                        step.tool = "fs_read"
+                        step.side_effect = "read"
             return plan_payload.steps
         except Exception:
             # Fallback default single step if model emits unparseable plan
@@ -80,8 +108,8 @@ class Planner:
                 PlanStep(
                     step_index=1,
                     description=f"Execute prompt task: {prompt[:80]}",
-                    tool="fs_read",
-                    side_effect="read",
+                    tool="generate_document" if any(w in prompt.lower() for w in ("presentation", "slide", "pptx", "pdf", "deck")) else "fs_read",
+                    side_effect="write" if any(w in prompt.lower() for w in ("presentation", "slide", "pptx", "pdf", "deck")) else "read",
                     requires_approval=False,
                     idempotent=True,
                     dependencies=[],

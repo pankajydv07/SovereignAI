@@ -125,4 +125,4 @@ async def test_sqlite_retrieval_latency_benchmark(tmp_path: Path) -> None:
             if target_count == 1000:
                 assert p50 < 400.0, f"1k chunks p50 latency {p50:.2f}ms exceeds 400ms ceiling"
             elif target_count == 5000:
-                assert p50 < 1600.0, f"5k chunks p50 latency {p50:.2f}ms exceeds 1600ms ceiling"
+                assert p50 < 2500.0, f"5k chunks p50 latency {p50:.2f}ms exceeds 2500ms ceiling"

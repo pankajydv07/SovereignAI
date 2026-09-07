@@ -144,7 +144,6 @@ async def test_generate_document_rejects_official_deliverable_filename(tmp_path:
         "inspection_report.docx",
         "cost_sheet.xlsx",
         "engineering_calc.xlsx",
-        "review_deck.pptx",
     ]:
         args = GenerateDocumentInput(
             taskDescription="Generate report document",
@@ -155,6 +154,16 @@ async def test_generate_document_rejects_official_deliverable_filename(tmp_path:
             await tool.run(args, ctx)
 
         assert "render_deliverable" in str(exc_info.value)
+
+    # Official review_deck.pptx filename triggers governance violation error forcing render_deliverable
+    pptx_args = GenerateDocumentInput(
+        taskDescription="Generate review deck presentation",
+        outputFormat="pptx",
+        outputFilename="review_deck.pptx",
+    )
+    with pytest.raises(OfficialDeliverableViolationError) as exc_info:
+        await tool.run(pptx_args, ctx)
+    assert "render_deliverable" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

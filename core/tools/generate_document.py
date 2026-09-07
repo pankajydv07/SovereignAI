@@ -24,6 +24,12 @@ from renderers.post_processor import (
 from renderers.schemas import SystemProvenanceMetadata
 from sandbox.runner import prepare_sandbox_env
 from tools.base import BaseTool, SideEffect, ToolContext, ToolKind, ToolResult
+from tools.doc_script_builder import (
+    build_docx_script,
+    build_pdf_script,
+    build_pptx_script,
+    normalize_typographic_punctuation,
+)
 from tools.workspace import verify_workspace_path
 
 log = structlog.get_logger()
@@ -71,84 +77,16 @@ class GenerateDocumentInput(ProtocolBaseModel):
 class GenerateDocumentOutput(ProtocolBaseModel):
     """Output model for script-based document generation tool."""
 
-    file_path: str = Field(alias="filePath")
-    output_format: str = Field(alias="outputFormat")
-    run_id: str = Field(alias="runId")
-    script_iterations: int = Field(alias="scriptIterations")
-    validation: dict[str, Any] = Field(description="Parse-back verification metrics")
-    success: bool = Field(default=True)
-
-
-def _build_pdf_script(declared_name: str, content: str) -> str:
-    escaped = json.dumps(content)
-    return (
-        "import os, sys, json\n"
-        "from reportlab.lib.pagesizes import letter\n"
-        "from reportlab.lib.styles import getSampleStyleSheet\n"
-        "from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer\n\n"
-        "def main():\n"
-        "    out_dir = os.environ.get('SWARAJ_OUT_DIR', './out')\n"
-        "    os.makedirs(out_dir, exist_ok=True)\n"
-        f"    out_path = os.path.join(out_dir, {json.dumps(declared_name)})\n"
-        "    doc = SimpleDocTemplate(out_path, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)\n"
-        "    styles = getSampleStyleSheet()\n"
-        "    story = []\n"
-        f"    raw_text = {escaped}\n"
-        "    for line in raw_text.splitlines():\n"
-        "        trimmed = line.strip()\n"
-        "        if not trimmed:\n"
-        "            story.append(Spacer(1, 8))\n"
-        "            continue\n"
-        "        if trimmed.startswith('# '):\n"
-        "            story.append(Paragraph(f'<b><font size=16>{trimmed[2:]}</font></b>', styles['Heading1']))\n"
-        "            story.append(Spacer(1, 10))\n"
-        "        elif trimmed.startswith('## '):\n"
-        "            story.append(Paragraph(f'<b><font size=13>{trimmed[3:]}</font></b>', styles['Heading2']))\n"
-        "            story.append(Spacer(1, 8))\n"
-        "        elif trimmed.startswith('### '):\n"
-        "            story.append(Paragraph(f'<b><font size=11>{trimmed[4:]}</font></b>', styles['Heading3']))\n"
-        "            story.append(Spacer(1, 6))\n"
-        "        elif trimmed.startswith(('- ', '* ')):\n"
-        "            story.append(Paragraph(f'&bull; {trimmed[2:]}', styles['Normal']))\n"
-        "            story.append(Spacer(1, 4))\n"
-        "        else:\n"
-        "            story.append(Paragraph(trimmed, styles['Normal']))\n"
-        "            story.append(Spacer(1, 6))\n"
-        "    doc.build(story)\n\n"
-        "if __name__ == '__main__':\n"
-        "    main()\n"
+    file_path: str = Field(alias="filePath", description="Workspace-relative path to produced file")
+    output_format: str = Field(alias="outputFormat", description="File extension / format")
+    run_id: str = Field(alias="runId", description="Unique identifier for the document execution")
+    script_iterations: int = Field(
+        alias="scriptIterations", description="Number of sandbox repair iterations executed"
     )
-
-
-def _build_docx_script(declared_name: str, content: str) -> str:
-    escaped = json.dumps(content)
-    return (
-        "import os, sys, json\n"
-        "from docx import Document\n\n"
-        "def main():\n"
-        "    out_dir = os.environ.get('SWARAJ_OUT_DIR', './out')\n"
-        "    os.makedirs(out_dir, exist_ok=True)\n"
-        f"    out_path = os.path.join(out_dir, {json.dumps(declared_name)})\n"
-        "    doc = Document()\n"
-        f"    raw_text = {escaped}\n"
-        "    for line in raw_text.splitlines():\n"
-        "        trimmed = line.strip()\n"
-        "        if not trimmed:\n"
-        "            continue\n"
-        "        if trimmed.startswith('# '):\n"
-        "            doc.add_heading(trimmed[2:], level=1)\n"
-        "        elif trimmed.startswith('## '):\n"
-        "            doc.add_heading(trimmed[3:], level=2)\n"
-        "        elif trimmed.startswith('### '):\n"
-        "            doc.add_heading(trimmed[4:], level=3)\n"
-        "        elif trimmed.startswith(('- ', '* ')):\n"
-        "            doc.add_paragraph(trimmed[2:], style='List Bullet')\n"
-        "        else:\n"
-        "            doc.add_paragraph(trimmed)\n"
-        "    doc.save(out_path)\n\n"
-        "if __name__ == '__main__':\n"
-        "    main()\n"
+    validation: dict[str, Any] = Field(
+        default_factory=dict, description="Structural and cardinality validation metrics"
     )
+    success: bool = Field(default=True, description="Whether document generation succeeded")
 
 
 class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutput]):
@@ -178,12 +116,13 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
         self._session_store = session_store
 
     async def run(self, args: GenerateDocumentInput, ctx: ToolContext) -> ToolResult:
+        target_dest = verify_workspace_path(args.output_filename, ctx.workspace_root)
+        fmt = args.output_format.lower().strip()
+
         check_official_deliverable_boundary(
             args.output_filename, args.task_description, args.script_code
         )
         run_id = f"doc_{uuid.uuid4().hex[:8]}"
-        fmt = args.output_format.lower().strip()
-        target_dest = verify_workspace_path(args.output_filename, ctx.workspace_root)
 
         models_used = ["active-agent-model"]
         try:
@@ -205,7 +144,7 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
         # Markdown direct path
         if fmt == "md":
             target_dest.parent.mkdir(parents=True, exist_ok=True)
-            text_to_write = args.markdown_content or args.task_description
+            text_to_write = normalize_typographic_punctuation(args.markdown_content or args.task_description)
             target_dest.write_text(text_to_write, encoding="utf-8")
             val_metrics = validate_generated_document(target_dest, "md")
             inject_system_provenance(target_dest, "md", prov)
@@ -223,12 +162,14 @@ class GenerateDocumentTool(BaseTool[GenerateDocumentInput, GenerateDocumentOutpu
         # Build initial script if not provided
         initial_script = args.script_code
         declared_name = Path(args.output_filename).name
-        content = args.markdown_content or args.task_description
+        content = normalize_typographic_punctuation(args.markdown_content or args.task_description)
 
         if not initial_script and fmt == "pdf" and content:
-            initial_script = _build_pdf_script(declared_name, content)
+            initial_script = build_pdf_script(declared_name, content)
         elif not initial_script and fmt == "docx" and content:
-            initial_script = _build_docx_script(declared_name, content)
+            initial_script = build_docx_script(declared_name, content)
+        elif not initial_script and fmt == "pptx" and content:
+            initial_script = build_pptx_script(declared_name, content)
 
         if not initial_script:
             return ToolResult.failed("Missing required 'scriptCode' or content for document generation.")

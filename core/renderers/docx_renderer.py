@@ -278,6 +278,24 @@ class DocxRenderer:
             section.bottom_margin = Inches(0.8)
             section.left_margin = Inches(0.8)
             section.right_margin = Inches(0.8)
+        self._apply_fonts(doc)
+
+    def _apply_fonts(self, doc: DocumentClass) -> None:
+        """Configure Latin font to Calibri and Complex Script (Devanagari) to Noto Sans Devanagari."""
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+
+        style = doc.styles["Normal"]
+        style.font.name = "Calibri"
+        style.font.size = Pt(11)
+        rPr = style.element.get_or_add_rPr()
+        rFonts = rPr.find(qn("w:rFonts"))
+        if rFonts is None:
+            rFonts = OxmlElement("w:rFonts")
+            rPr.append(rFonts)
+        rFonts.set(qn("w:ascii"), "Calibri")
+        rFonts.set(qn("w:hAnsi"), "Calibri")
+        rFonts.set(qn("w:cs"), "Noto Sans Devanagari")
 
     def _add_provenance_footer_docx(
         self, doc: DocumentClass, prov: SystemProvenanceMetadata

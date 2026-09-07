@@ -213,12 +213,27 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
     if (isTauri) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("run_plan", {
+        const streamId = await invoke<number>("run_plan", {
           sessionId: currentSessionId,
           projectId: activeProject?.id || "default-project",
           projectPath: activeProject?.path || undefined,
           steps: activePlanSteps,
         });
+
+        setActiveStreamId(streamId);
+        setActivePlanSteps(null);
+
+        const assistantMsg: ChatMessage = {
+          id: String(streamId),
+          sender: "assistant",
+          model: "executing plan...",
+          content: "",
+          thinking: "",
+          isStreaming: true,
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+        userScrolledUpRef.current = false;
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       } catch (err) {
         console.error("Failed to execute plan:", err);
       }

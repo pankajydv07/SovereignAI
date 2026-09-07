@@ -108,7 +108,7 @@ impl CoreSupervisor {
             return Err(RpcError::CoreRestarted);
         }
 
-        match tokio::time::timeout(Duration::from_secs(5), rx).await {
+        match tokio::time::timeout(Duration::from_secs(30), rx).await {
             Ok(Ok(res)) => res,
             Ok(Err(_)) => {
                 self.pending_requests.lock().await.remove(&id);
@@ -116,7 +116,7 @@ impl CoreSupervisor {
             }
             Err(_) => {
                 self.pending_requests.lock().await.remove(&id);
-                Err(RpcError::Timeout(Duration::from_secs(5)))
+                Err(RpcError::Timeout(Duration::from_secs(30)))
             }
         }
     }
@@ -443,8 +443,9 @@ impl CoreSupervisor {
         }
         self.emit_state_change(&ready_state);
 
-        // Step 2: Heartbeat loop (ping every 3s)
-        let mut interval = tokio::time::interval(Duration::from_secs(3));
+        // Step 2: Heartbeat loop (ping every 5s with 10s timeout and 3 retry tolerance)
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        let mut consecutive_misses: u32 = 0;
         loop {
             interval.tick().await;
             let ping_id = self.request_id_counter.fetch_add(1, Ordering::SeqCst);
@@ -467,10 +468,19 @@ impl CoreSupervisor {
                 break;
             }
 
-            let ping_result = tokio::time::timeout(Duration::from_secs(2), ping_rx).await;
+            let ping_result = tokio::time::timeout(Duration::from_secs(10), ping_rx).await;
             if ping_result.is_err() || ping_result.unwrap().is_err() {
-                eprintln!("[sidecar] Core ping heartbeat lost or timed out");
-                break;
+                consecutive_misses += 1;
+                eprintln!(
+                    "[sidecar] Core ping heartbeat missed ({}/3)",
+                    consecutive_misses
+                );
+                if consecutive_misses >= 3 {
+                    eprintln!("[sidecar] Core ping heartbeat lost after 3 consecutive timeouts");
+                    break;
+                }
+            } else {
+                consecutive_misses = 0;
             }
         }
 

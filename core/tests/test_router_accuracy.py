@@ -49,6 +49,9 @@ async def test_zero_keyword_paraphrase_routing():
         ("why did this fail with NullPointerException", TaskClass.CODE_DEBUG),
         ("determine the pipe wall thickness under 50 bar", TaskClass.ENGINEERING_CALC),
         ("draft a formal sanction note for the CGM", TaskClass.OFFICIAL_DRAFTING),
+        ("create a management review deck", TaskClass.OFFICIAL_DRAFTING),
+        ("make slides from this report", TaskClass.OFFICIAL_DRAFTING),
+        ("generate a PPTX presentation", TaskClass.OFFICIAL_DRAFTING),
         ("pull out all flange ratings from table 4", TaskClass.DOC_EXTRACT),
         ("what is the mandatory safety clearance under OISD 118", TaskClass.KB_QA),
     ]

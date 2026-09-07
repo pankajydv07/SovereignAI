@@ -73,11 +73,19 @@ class FsReadTool(BaseTool[FsReadInput, FsReadOutput]):
                 text = convert_document_to_markdown(target_path)
             else:
                 raw_bytes = target_path.read_bytes()
-                text = raw_bytes.decode("utf-8", errors="replace")
+                text = None
+                for enc in ("utf-8-sig", "utf-8", "windows-1252", "latin-1"):
+                    try:
+                        text = raw_bytes.decode(enc)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                if text is None:
+                    text = raw_bytes.decode("utf-8", errors="replace")
 
-            clean_text = text.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
-            raw_bytes = clean_text.encode("utf-8", errors="replace")
-            total_bytes = len(raw_bytes)
+            clean_text = text
+            encoded_bytes = clean_text.encode("utf-8")
+            total_bytes = len(encoded_bytes)
             lines = clean_text.splitlines(keepends=True)
             total_lines = len(lines)
         except Exception as exc:
