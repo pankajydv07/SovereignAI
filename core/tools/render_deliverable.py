@@ -63,6 +63,10 @@ class RenderDeliverableTool(BaseTool[RenderDeliverableInput, RenderDeliverableOu
 
     async def run(self, args: RenderDeliverableInput, ctx: ToolContext) -> ToolResult:
         run_id = f"render_{ctx.session_id}"
+        if args.deliverable_type == "review_deck":
+            return ToolResult.failed(
+                "Governed review decks are not yet available and cannot enter the approval workflow"
+            )
 
         try:
             out_path = verify_workspace_path(args.output_filename, ctx.workspace_root)
@@ -90,3 +94,6 @@ class RenderDeliverableTool(BaseTool[RenderDeliverableInput, RenderDeliverableOu
             return ToolResult.failed(f"ValidationError: {exc}")
         except Exception as exc:
             return ToolResult.failed(f"Render failed: {exc}")
+
+
+

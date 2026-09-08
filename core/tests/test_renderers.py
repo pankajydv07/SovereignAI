@@ -159,8 +159,8 @@ def test_docx_inspection_summary_rendering(temp_dir: Path, sample_citation: Cita
     assert res_path.exists()
 
 
-def test_pptx_review_deck_rendering_deferred(temp_dir: Path, sample_citation: CitationRef) -> None:
-    """Test PPTX Review Deck raises Release 2 deferral message."""
+def test_pptx_review_deck_rendering(temp_dir: Path, sample_citation: CitationRef) -> None:
+    """Test governed PPTX Review Deck rendering."""
     data = {
         "title": "Crude Distillation Unit Inspection Review",
         "subtitle": "MRPL Phase III Expansion Unit",
@@ -178,13 +178,16 @@ def test_pptx_review_deck_rendering_deferred(temp_dir: Path, sample_citation: Ci
     engine = DeliverableRenderEngine()
     out_file = temp_dir / "review_deck.pptx"
 
-    with pytest.raises(ValueError, match="Governed review decks are not yet available"):
-        engine.render(
-            deliverable_type="review_deck",
-            data=data,
-            run_id="run_test_103",
-            output_path=out_file,
-        )
+    result = engine.render(
+        deliverable_type="review_deck",
+        data=data,
+        run_id="run_test_103",
+        output_path=out_file,
+    )
+
+    assert result == out_file
+    assert out_file.exists()
+    assert out_file.stat().st_size > 0
 
 
 def test_xlsx_cost_sheet_live_formulas(temp_dir: Path, sample_citation: CitationRef) -> None:

@@ -109,14 +109,12 @@ class ChatManager:
             self.active_turn_loops[target_id].cancel()
         if target_id in self.active_streams:
             self.active_streams[target_id].cancel()
-        try:
+        if isinstance(target_id, str) and target_id.lstrip("-").isdigit():
             int_id = int(target_id)
             if int_id in self.active_streams:
                 self.active_streams[int_id].cancel()
             if int_id in self.active_turn_loops:
                 self.active_turn_loops[int_id].cancel()
-        except (ValueError, TypeError):
-            pass
         if target_id in self.active_indexing_tasks:
             tasks = self.active_indexing_tasks.pop(target_id, [])
             for task in tasks:

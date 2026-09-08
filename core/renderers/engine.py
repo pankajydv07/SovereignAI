@@ -81,10 +81,12 @@ class DeliverableRenderEngine:
             )
 
         elif d_type == "review_deck":
-            raise ValueError(
-                "Governed review decks are not yet available. An informal presentation can be "
-                "generated via the ad-hoc path — it will be marked non-official and cannot "
-                "enter the approval workflow."
+            assert isinstance(schema_obj, ReviewDeckSchema)
+            return self.pptx_renderer.render_review_deck(
+                schema_obj,
+                prov,
+                out_path,
+                template_name,
             )
 
         elif d_type == "cost_sheet":

@@ -89,3 +89,8 @@ This is **not a general-purpose IDE**. No language servers, no debugger, no refa
 ## Licence
 
 All dependencies and model weights must be permissively licensed. Model licences are surfaced in the UI; non-commercial weights are marked undeployable.
+
+
+
+(.venv) PS C:\Users\PREDATOR\OneDrive\Desktop\sih_app\SovereignAI\apps\desktop> $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"                                                  
+>> pnpm tauri dev                                                                                                                                                                    
