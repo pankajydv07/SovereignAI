@@ -92,5 +92,4 @@ All dependencies and model weights must be permissively licensed. Model licences
 
 
 
-(.venv) PS C:\Users\PREDATOR\OneDrive\Desktop\sih_app\SovereignAI\apps\desktop> $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"                                                  
->> pnpm tauri dev                                                                                                                                                                    
+                                                                                                                                                                   

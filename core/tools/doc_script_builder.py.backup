@@ -1,4 +1,4 @@
-﻿"""Native AST Script Builders for Sandbox Document Generation.
+"""Native AST Script Builders for Sandbox Document Generation.
 
 Generates sandboxed Python scripts that emit native Word (python-docx), PDF (ReportLab),
 Excel (openpyxl), and PowerPoint (python-pptx) elements conforming to SWARAJ PSU design tokens.
@@ -13,14 +13,13 @@ HYPHEN_REPLACEMENTS = {
     "\uFE63": "-", "\uFF0D": "-", "\u2043": "-", "\u25A0": "-", "\u25AA": "-",
     "\u25FE": "-", "\u25FD": "-", "\u00A0": " ", "\u202F": " ", "\u2007": " ",
     "\u2008": " ", "\u2009": " ", "\u200A": " ", "\u200B": "", "\uFEFF": "",
-    "\u2022": "-", "\u25CF": "-", "\u25E6": "-", "\u2219": "-",
 }
 
 HYPHEN_MAP_CODE = (
     "HYPHEN_MAP = {'\\u2011': '-', '\\u2010': '-', '\\u00AD': '-', '\\u2012': '-', "
     "'\\u2212': '-', '\\uFE63': '-', '\\uFF0D': '-', '\\u2043': '-', "
     "'\\u25A0': '-', '\\u25AA': '-', '\\u25FE': '-', '\\u25FD': '-', "
-    "'\\u00A0': ' ', '\\u202F': ' ', '\\u200B': '', '\\uFEFF': '', '\\u2022': '-', '\\u25CF': '-', '\\u25E6': '-', '\\u2219': '-'}\n\n"
+    "'\\u00A0': ' ', '\\u202F': ' ', '\\u200B': '', '\\uFEFF': ''}\n\n"
     "def clean_line(t):\n"
     "    if not t: return ''\n"
     "    for k, v in HYPHEN_MAP.items(): t = t.replace(k, v)\n"
@@ -46,14 +45,14 @@ def build_pdf_script(declared_name: str, content: str) -> str:
         "import os, sys, json, re\n"
         "from reportlab.lib.pagesizes import A4\n"
         "from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle\n"
-        "from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether\n"
+        "from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle\n"
         "from reportlab.lib import colors\n\n"
         f"{HYPHEN_MAP_CODE}\n"
         "def main():\n"
         "    out_dir = os.environ.get('SWARAJ_OUT_DIR', './out')\n"
         "    os.makedirs(out_dir, exist_ok=True)\n"
         f"    out_path = os.path.join(out_dir, {json.dumps(declared_name)})\n"
-        "    doc = SimpleDocTemplate(out_path, pagesize=A4, leftMargin=54, rightMargin=54, topMargin=54, bottomMargin=54, allowSplitting=1)\n"
+        "    doc = SimpleDocTemplate(out_path, pagesize=A4, leftMargin=85, rightMargin=56, topMargin=71, bottomMargin=71)\n"
         "    styles = getSampleStyleSheet()\n"
         "    h1_style = ParagraphStyle('H1', parent=styles['Heading1'], fontSize=14, leading=18, textColor=colors.HexColor('#1F2328'), spaceBefore=18, spaceAfter=6, keepWithNext=True)\n"
         "    h2_style = ParagraphStyle('H2', parent=styles['Heading2'], fontSize=12, leading=16, textColor=colors.HexColor('#1F2328'), spaceBefore=12, spaceAfter=4, keepWithNext=True)\n"
@@ -87,7 +86,7 @@ def build_pdf_script(declared_name: str, content: str) -> str:
         "                    table_data.append([Paragraph(re.sub(r'\\*\\*(.+?)\\*\\*', r'<b>\\1</b>', c), body_style) for c in cells])\n"
         "                i += 1\n"
         "            if table_data:\n"
-        "                t = Table(table_data, repeatRows=1, splitByRow=1, hAlign='LEFT')\n"
+        "                t = Table(table_data)\n"
         "                t.setStyle(TableStyle([\n"
         "                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1F2328')),\n"
         "                    ('TEXTCOLOR', (0,0), (-1,0), colors.white),\n"
@@ -264,7 +263,7 @@ def build_pptx_script(declared_name: str, content: str) -> str:
         "                cb = current_slide.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(11.7), Inches(5.0))\n"
         "                current_tf = cb.text_frame; current_tf.word_wrap = True\n"
         "            p = current_tf.add_paragraph() if current_tf.paragraphs and current_tf.paragraphs[0].text else current_tf.paragraphs[0]\n"
-        "            p.text = f'â€¢ {strip_md(trimmed[2:])}'; p.font.size = Pt(14); p.font.color.rgb = RGBColor(0x1F, 0x23, 0x28); p.space_after = Pt(8)\n"
+        "            p.text = f'• {strip_md(trimmed[2:])}'; p.font.size = Pt(14); p.font.color.rgb = RGBColor(0x1F, 0x23, 0x28); p.space_after = Pt(8)\n"
         "        elif trimmed.startswith('|') and trimmed.endswith('|'):\n"
         "            table_lines = []\n"
         "            while i < len(lines) and clean_line(lines[i]).strip().startswith('|') and clean_line(lines[i]).strip().endswith('|'):\n"
@@ -353,8 +352,3 @@ def build_xlsx_script(declared_name: str, content: str) -> str:
         "if __name__ == '__main__':\n"
         "    main()\n"
     )
-
-
-
-
-
